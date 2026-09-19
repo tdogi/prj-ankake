@@ -1,0 +1,10 @@
+import { useState } from "react";
+import { BackgroundScene } from "@ankake/ui";
+
+export function OnlineBattlePreparationScreen({ onReturn, onMatched }: { readonly onReturn: () => void; readonly onMatched: () => void }) {
+  const [name, setName] = useState("");
+  const [passphrase, setPassphrase] = useState("");
+  const [status, setStatus] = useState<string>(); const [matching, setMatching] = useState(false);
+  async function match(): Promise<void> { const url = import.meta.env.VITE_SUPABASE_URL; const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY; if (!url || !key) { setStatus("Supabaseの接続設定を確認してください。"); return; } setMatching(true); try { const response = await fetch(`${url}/functions/v1/local-cpu-match`, { method: "POST", headers: { apikey: key, "Content-Type": "application/json" }, body: JSON.stringify({ playerName: name, passphrase, gameState: { mode: "local-cpu" } }) }); if (!response.ok) throw new Error(); onMatched(); } catch { setStatus("CPUとのマッチングに失敗しました。"); setMatching(false); } }
+  return <main className="battle-prep-screen" data-testid="online-battle-preparation-screen"><BackgroundScene /><header className="battle-prep-header"><button className="battle-button battle-button--quiet" onClick={onReturn} type="button">戻る</button><div><p className="battle-kicker">オンライン対戦</p><h1>対戦準備・マッチング</h1></div></header><section className="battle-prep-grid"><label className="battle-panel battle-deck-selector">表示名<input value={name} onChange={(event) => setName(event.currentTarget.value)} /></label><label className="battle-panel battle-deck-selector">合言葉（任意）<input value={passphrase} onChange={(event) => setPassphrase(event.currentTarget.value)} /></label><section className="battle-panel battle-start-panel"><h2>ローカル対戦</h2><p>ローカルサーバーではCPUと即時に対戦します。</p>{status ? <p role="status">{status}</p> : null}<button className="battle-button battle-button--primary" disabled={!name.trim() || matching} onClick={() => void match()} type="button">CPUとマッチングを開始</button></section></section></main>;
+}

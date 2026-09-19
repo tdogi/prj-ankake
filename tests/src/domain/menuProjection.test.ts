@@ -1,6 +1,7 @@
 import {
   projectMenuViewModel,
   type AppSnapshot,
+  type DestinationCapability,
   type DestinationCapabilityMap
 } from "@ankake/domain";
 import fc from "fast-check";
@@ -40,8 +41,8 @@ describe("menu projection", () => {
 
     const viewModel = projectMenuViewModel(ready, configuredCapabilities);
 
-    expect(viewModel.actions).toHaveLength(2);
-    expect(viewModel.actions.map((action) => action.id)).toEqual(["cpu-battle", "deck-building"]);
+    expect(viewModel.actions).toHaveLength(3);
+    expect(viewModel.actions.map((action) => action.id)).toEqual(["online-battle", "cpu-battle", "deck-building"]);
     expect(viewModel.actions.every((action) => action.enabled === false)).toBe(true);
   });
 
@@ -63,12 +64,12 @@ describe("menu projection", () => {
             ...capabilities["cpu-battle"],
             enabled: false,
             disabledReason: "generated disabled"
-          },
+          } as DestinationCapability,
           "deck-building": {
             ...capabilities["deck-building"],
             enabled: false,
             disabledReason: "generated disabled"
-          }
+          } as DestinationCapability
         };
         const projectedSnapshot =
           snapshot.kind === "ready"

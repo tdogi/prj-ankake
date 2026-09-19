@@ -31,9 +31,10 @@ export interface MenuViewModel {
   readonly fatalErrorDialog?: FatalErrorState;
 }
 
-const MENU_ACTION_ORDER: readonly MenuActionId[] = ["cpu-battle", "deck-building"];
+const MENU_ACTION_ORDER: readonly MenuActionId[] = ["online-battle", "cpu-battle", "deck-building"];
 
 const MENU_ACTION_COPY: Record<MenuActionId, Pick<MenuActionViewModel, "description" | "dataTestId" | "tone" | "routeLabel">> = {
+  "online-battle": { description: "Match locally against CPU.", dataTestId: "menu-action-online-battle", tone: "primary", routeLabel: "Online battle" },
   "cpu-battle": {
     description: "Play a local CPU match after battle rules arrive.",
     dataTestId: "menu-action-cpu-battle",
@@ -70,19 +71,19 @@ export function projectMenuViewModel(
 
 function projectAction(
   actionId: MenuActionId,
-  capability: DestinationCapability,
+  capability: DestinationCapability | undefined,
   isReady: boolean
 ): MenuActionViewModel {
   const copy = MENU_ACTION_COPY[actionId];
-  const enabled = isReady && capability.enabled;
+  const enabled = isReady && Boolean(capability?.enabled);
 
   return {
     id: actionId,
-    label: capability.label,
+    label: capability?.label ?? copy.routeLabel,
     description: copy.description,
     routeLabel: copy.routeLabel,
     enabled,
-    disabledReason: enabled ? undefined : capability.disabledReason ?? "Available in a later unit of work.",
+    disabledReason: enabled ? undefined : capability?.disabledReason ?? "Available in a later unit of work.",
     dataTestId: copy.dataTestId,
     tone: copy.tone
   };

@@ -12,6 +12,8 @@
 
 - Node.js 20 以降
 - npm（Node.js に同梱）
+- Docker Desktop
+- [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started)
 
 ### 手順
 
@@ -19,10 +21,21 @@
 
 ```bash
 npm ci
+npx supabase start
 npm run dev
 ```
 
 起動メッセージに表示されるURL（通常は <http://127.0.0.1:5173/>）をブラウザで開くとゲームを開始できます。終了するにはターミナルで `Ctrl+C` を押します。
+
+### ローカルオンライン対戦
+
+`npx supabase start` の出力から`Project URL`と`Publishable`を確認し、`.env.example` をコピーして `.env.local` に設定します。ローカル環境では**オンライン対戦**を選ぶと、待機相手を探さずCPUとの対戦を作成します。人間同士のマッチングは本番Supabase用の機能です。
+
+```bash
+npx supabase stop
+```
+
+でローカルSupabaseを停止できます。本番SupabaseのURLやキーはローカル開発用の環境変数へ設定しないでください。
 
 本番ビルドの確認には、次を使用します。
 

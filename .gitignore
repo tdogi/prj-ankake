@@ -6,3 +6,8 @@ node_modules/
 
 # Codex files
 .codex/
+
+.env
+.env.local
+supabase/.branches/
+supabase/.temp/

@@ -25,6 +25,7 @@
     "@vitejs/plugin-react": "^4.3.1",
     "fast-check": "^3.23.2",
     "jsdom": "^24.1.1",
+    "supabase": "^2.117.0",
     "typescript": "^5.5.4",
     "vite": "^5.4.0",
     "vitest": "^2.0.5"
