@@ -1,6 +1,9 @@
 import type { BattleBaseId, BattleCommand, BoardCoordinate, LegalAction } from "@ankake/domain";
 import type { CpuVisibleBase, CpuVisibleCard, CpuVisibleState } from "./visibleState";
 
+const CENTER_BASE_ID = "neutral-center";
+const CENTER_APPROACH_RANGE = 5;
+
 export type CpuStopReason =
   | "no-legal-action"
   | "no-beneficial-action"
@@ -104,6 +107,7 @@ function scoreSpell(action: LegalAction, visible: CpuVisibleState, reasons: stri
 /** Scores automatic attacks enabled by a square, objectives, and exposure. */
 function scorePosition(position: BoardCoordinate, attack: number, visible: CpuVisibleState, reasons: string[]): number {
   let value = progressValue(position);
+  value += scoreCenterApproach(position, visible, reasons);
   const adjacentEnemies = visible.boardCards.filter((card) => card.side === "player" && card.position && isAdjacent(position, card.position));
   for (const enemy of adjacentEnemies) value += creatureValue(enemy) + attack * 2;
   if (adjacentEnemies.length) reasons.push("attack-enemy");
@@ -123,10 +127,38 @@ function scoreBaseTarget(base: CpuVisibleBase, visible: CpuVisibleState, reasons
     reasons.push(lethal ? "win-game" : "pressure-player-base");
     return lethal ? 1000 : 24 + (base.maxHp - base.currentHp) * 2;
   }
-  const finalNeutral = visible.bases.filter((candidate) => candidate.kind === "neutral-base" && candidate.owner === "cpu").length === 2;
+  const ownedNeutralCount = visible.bases.filter((candidate) => candidate.kind === "neutral-base" && candidate.owner === "cpu").length;
+  const finalNeutral = ownedNeutralCount === 2;
   const capturable = attack > 0 && base.currentHp <= attack;
   reasons.push(finalNeutral && capturable ? "win-by-control" : "contest-neutral-base");
-  return finalNeutral && capturable ? 900 : 16 + (base.maxHp - base.currentHp) * 1.5;
+  if (finalNeutral && capturable) return 900;
+
+  const damageProgress = (base.maxHp - base.currentHp) * 1.5;
+  if (base.id !== CENTER_BASE_ID) return 16 + damageProgress;
+
+  reasons.push(base.owner === "player" ? "reclaim-center-base" : "pressure-center-base");
+  const ownershipPressure = base.owner === "player" ? 14 : 8;
+  const capturePressure = capturable ? 18 : 0;
+  return 30 + ownershipPressure + ownedNeutralCount * 3 + capturePressure + damageProgress;
+}
+
+/**
+ * The central neutral base is the board's most valuable staging objective:
+ * it has the largest health pool and grants a useful additional summon range.
+ * Reward progress towards a non-CPU-owned center before a unit is adjacent,
+ * so the CPU does not only notice the base after it reaches it.
+ */
+function scoreCenterApproach(position: BoardCoordinate, visible: CpuVisibleState, reasons: string[]): number {
+  const center = getVisibleBaseById(visible.bases, CENTER_BASE_ID);
+  if (center.owner === "cpu") return 0;
+
+  const distance = chebyshevDistance(position, center.coordinate);
+  const proximity = Math.max(0, CENTER_APPROACH_RANGE - distance);
+  if (proximity === 0) return 0;
+
+  reasons.push("advance-center-objective");
+  const contestBonus = center.owner === "player" ? 2 : 0;
+  return proximity * 4 + contestBonus;
 }
 
 function progressValue(position: BoardCoordinate): number {
@@ -141,6 +173,10 @@ function isAdjacent(left: BoardCoordinate, right: BoardCoordinate): boolean {
   const columnDelta = Math.abs(left.column - right.column);
   const rowDelta = Math.abs(left.row - right.row);
   return columnDelta <= 1 && rowDelta <= 1 && columnDelta + rowDelta > 0;
+}
+
+function chebyshevDistance(left: BoardCoordinate, right: BoardCoordinate): number {
+  return Math.max(Math.abs(left.column - right.column), Math.abs(left.row - right.row));
 }
 
 function getVisibleBaseById(bases: readonly CpuVisibleBase[], baseId: BattleBaseId): CpuVisibleBase {
