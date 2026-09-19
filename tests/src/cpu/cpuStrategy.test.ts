@@ -117,6 +117,109 @@ describe("CPU strategy", () => {
     if (decision.kind === "command") expect(decision.score.reasons).toContain("win-by-control");
   });
 
+  it("advances toward the central neutral base before it can attack it", () => {
+    const advanceCenter = {
+      command: {
+        type: "moveCreature" as const,
+        side: "cpu" as const,
+        creatureInstanceId: "center-scout",
+        origin: { column: 5, row: 2 },
+        path: [{ column: 5, row: 3 }]
+      },
+      label: "Move Center Scout",
+      scoreHint: 1
+    };
+    const advanceElsewhere = {
+      command: {
+        type: "moveCreature" as const,
+        side: "cpu" as const,
+        creatureInstanceId: "side-scout",
+        origin: { column: 9, row: 2 },
+        path: [{ column: 9, row: 3 }]
+      },
+      label: "Move Side Scout",
+      scoreHint: 1
+    };
+    const visible = tacticalVisible([advanceElsewhere, advanceCenter], [
+      visibleCard("center-scout", "cpu", 2, 3, { column: 5, row: 2 }),
+      visibleCard("side-scout", "cpu", 7, 7, { column: 9, row: 2 })
+    ]);
+
+    const decision = chooseCpuAction(visible);
+
+    expect(decision).toMatchObject({ kind: "command", command: advanceCenter.command });
+    if (decision.kind === "command") expect(decision.score.reasons).toContain("advance-center-objective");
+  });
+
+  it("prioritizes attacking the central neutral base over developing another creature", () => {
+    const attackCenter = {
+      command: {
+        type: "moveCreature" as const,
+        side: "cpu" as const,
+        creatureInstanceId: "center-attacker",
+        origin: { column: 5, row: 3 },
+        path: [{ column: 5, row: 4 }]
+      },
+      label: "Move Center Attacker",
+      scoreHint: 1
+    };
+    const developBoard = {
+      command: {
+        type: "summonCreature" as const,
+        side: "cpu" as const,
+        handInstanceId: "large-creature",
+        destination: { column: 5, row: 1 }
+      },
+      label: "Summon Large Creature",
+      scoreHint: 8
+    };
+    const visible = tacticalVisible([developBoard, attackCenter], [
+      visibleCard("center-attacker", "cpu", 3, 4, { column: 5, row: 3 })
+    ], [visibleCard("large-creature", "cpu", 8, 8)]);
+
+    const decision = chooseCpuAction(visible);
+
+    expect(decision).toMatchObject({ kind: "command", command: attackCenter.command });
+    if (decision.kind === "command") expect(decision.score.reasons).toContain("pressure-center-base");
+  });
+
+  it("prioritizes recapturing a player-owned central neutral base", () => {
+    const reclaimCenter = {
+      command: {
+        type: "moveCreature" as const,
+        side: "cpu" as const,
+        creatureInstanceId: "center-attacker",
+        origin: { column: 5, row: 3 },
+        path: [{ column: 5, row: 4 }]
+      },
+      label: "Move Center Attacker",
+      scoreHint: 1
+    };
+    const contestSide = {
+      command: {
+        type: "moveCreature" as const,
+        side: "cpu" as const,
+        creatureInstanceId: "side-attacker",
+        origin: { column: 1, row: 3 },
+        path: [{ column: 1, row: 4 }]
+      },
+      label: "Move Side Attacker",
+      scoreHint: 1
+    };
+    const visible = tacticalVisible([contestSide, reclaimCenter], [
+      visibleCard("center-attacker", "cpu", 3, 4, { column: 5, row: 3 }),
+      visibleCard("side-attacker", "cpu", 3, 4, { column: 1, row: 3 })
+    ]);
+    const bases = visible.bases.map((base) =>
+      base.id === "neutral-center" ? { ...base, owner: "player" as const, currentHp: 3 } : base
+    );
+
+    const decision = chooseCpuAction({ ...visible, bases });
+
+    expect(decision).toMatchObject({ kind: "command", command: reclaimCenter.command });
+    if (decision.kind === "command") expect(decision.score.reasons).toContain("reclaim-center-base");
+  });
+
   it("returns a stop reason when no legal actions exist", () => {
     const bases = createInitialBattleBases();
     const visible: CpuVisibleState = {
