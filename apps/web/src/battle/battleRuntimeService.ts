@@ -12,6 +12,7 @@ import {
 import {
   chooseCpuAction,
   projectCpuVisibleState,
+  redactCpuForecastHand,
   type CpuStopReason
 } from "@ankake/cpu";
 import type { BattleDiagnosticSink } from "./battleDiagnostics";
@@ -129,7 +130,21 @@ export async function executeCpuTurn(
 
     const legalActions = generateLegalActions(session.state, "cpu");
     const visible = projectCpuVisibleState(session.state, legalActions);
-    const decision = chooseCpuAction(visible);
+    const decision = chooseCpuAction(visible, (action) => {
+      // The strategy receives only the CPU-redacted result, never the
+      // authoritative state used to produce it.  This allows it to compare
+      // effect resolution and action order without reading hidden zones.
+      const forecast = GameEngine.submitCommand(session.state, action.command);
+      // A speculative random outcome is not public knowledge.  Do not score
+      // such a branch; the regular visible-state heuristic remains available.
+      if (!forecast.ok || forecast.state.metadata.rng.position !== session.state.metadata.rng.position) {
+        return undefined;
+      }
+      return redactCpuForecastHand(
+        projectCpuVisibleState(forecast.state, []),
+        visible.cpuHand.map((card) => card.instanceId)
+      );
+    });
 
     if (decision.kind === "stop") {
       diagnostics.cpuStop(decision.reason);
