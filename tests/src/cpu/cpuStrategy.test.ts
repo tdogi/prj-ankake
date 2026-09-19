@@ -8,6 +8,7 @@ import {
 import {
   BATTLE_BASE_IDS,
   coordinateKey,
+  createEmptyResonance,
   createInitialBattleBases,
   generateLegalActions,
   getShortestMovementPaths,
@@ -117,38 +118,38 @@ describe("CPU strategy", () => {
     if (decision.kind === "command") expect(decision.score.reasons).toContain("win-by-control");
   });
 
-  it("advances toward the central neutral base before it can attack it", () => {
-    const advanceCenter = {
+  it("breaks an opening side-base tie toward the left neutral base", () => {
+    const advanceSide = {
       command: {
         type: "moveCreature" as const,
         side: "cpu" as const,
-        creatureInstanceId: "center-scout",
-        origin: { column: 5, row: 2 },
-        path: [{ column: 5, row: 3 }]
+        creatureInstanceId: "side-scout",
+        origin: { column: 4, row: 2 },
+        path: [{ column: 3, row: 3 }]
       },
-      label: "Move Center Scout",
+      label: "Move Side Scout",
       scoreHint: 1
     };
     const advanceElsewhere = {
       command: {
         type: "moveCreature" as const,
         side: "cpu" as const,
-        creatureInstanceId: "side-scout",
-        origin: { column: 9, row: 2 },
+        creatureInstanceId: "center-scout",
+        origin: { column: 8, row: 2 },
         path: [{ column: 9, row: 3 }]
       },
       label: "Move Side Scout",
       scoreHint: 1
     };
-    const visible = tacticalVisible([advanceElsewhere, advanceCenter], [
-      visibleCard("center-scout", "cpu", 2, 3, { column: 5, row: 2 }),
-      visibleCard("side-scout", "cpu", 7, 7, { column: 9, row: 2 })
+    const visible = tacticalVisible([advanceElsewhere, advanceSide], [
+      visibleCard("side-scout", "cpu", 2, 3, { column: 4, row: 2 }),
+      visibleCard("center-scout", "cpu", 2, 3, { column: 8, row: 2 })
     ]);
 
     const decision = chooseCpuAction(visible);
 
-    expect(decision).toMatchObject({ kind: "command", command: advanceCenter.command });
-    if (decision.kind === "command") expect(decision.score.reasons).toContain("advance-center-objective");
+    expect(decision).toMatchObject({ kind: "command", command: advanceSide.command });
+    if (decision.kind === "command") expect(decision.score.reasons).toContain("advance-side-objective");
   });
 
   it("prioritizes attacking the central neutral base over developing another creature", () => {
@@ -177,7 +178,10 @@ describe("CPU strategy", () => {
       visibleCard("center-attacker", "cpu", 3, 4, { column: 5, row: 3 })
     ], [visibleCard("large-creature", "cpu", 8, 8)]);
 
-    const decision = chooseCpuAction(visible);
+    const bases = visible.bases.map((base) =>
+      base.id === "neutral-left" ? { ...base, owner: "cpu" as const } : base
+    );
+    const decision = chooseCpuAction({ ...visible, bases });
 
     expect(decision).toMatchObject({ kind: "command", command: attackCenter.command });
     if (decision.kind === "command") expect(decision.score.reasons).toContain("pressure-center-base");
@@ -220,6 +224,77 @@ describe("CPU strategy", () => {
     if (decision.kind === "command") expect(decision.score.reasons).toContain("reclaim-center-base");
   });
 
+  it("defends an immediately threatened owned base before developing the board", () => {
+    const removeThreat = {
+      command: { type: "castSpell" as const, side: "cpu" as const, handInstanceId: "removal", targetInstanceId: "raider" },
+      label: "Cast Removal",
+      scoreHint: 2
+    };
+    const developBoard = {
+      command: { type: "summonCreature" as const, side: "cpu" as const, handInstanceId: "brute", destination: { column: 5, row: 1 } },
+      label: "Summon Brute",
+      scoreHint: 6
+    };
+    const visible = tacticalVisible(
+      [developBoard, removeThreat],
+      [visibleCard("raider", "player", 20, 4, { column: 5, row: 2 })],
+      [visibleSpell("removal", "AK-055"), visibleCard("brute", "cpu", 7, 7)]
+    );
+
+    const decision = chooseCpuAction(visible, (action) =>
+      action === removeThreat ? { ...visible, boardCards: [] } : visible
+    );
+
+    expect(decision).toMatchObject({ kind: "command", command: removeThreat.command });
+    if (decision.kind === "command") {
+      expect(decision.score.reasons).toContain("defend-owned-base");
+      expect(decision.score.reasons).toContain("prevent-immediate-loss");
+    }
+  });
+
+  it("uses a draw effect when its hand and board are weak", () => {
+    const draw = {
+      command: { type: "castSpell" as const, side: "cpu" as const, handInstanceId: "research" },
+      label: "Cast Research",
+      scoreHint: 3
+    };
+    const end = { command: { type: "endPlayPhase" as const, side: "cpu" as const, reason: "cpu" as const }, label: "End play phase", scoreHint: 0 };
+    const visible = tacticalVisible([end, draw], [], [visibleSpell("research", "AK-017")]);
+
+    const decision = chooseCpuAction(visible, (action) =>
+      action === draw ? { ...visible, cpuHandCount: 3 } : visible
+    );
+
+    expect(decision).toMatchObject({ kind: "command", command: draw.command });
+    if (decision.kind === "command") expect(decision.score.reasons).toContain("refill-weak-hand");
+  });
+
+  it("uses resolved board synergy to order a lane buff before a weaker deployment", () => {
+    const buff = {
+      command: { type: "castSpell" as const, side: "cpu" as const, handInstanceId: "war-cry", effectSelection: { lane: "center" as const } },
+      label: "Cast War Cry",
+      scoreHint: 2
+    };
+    const summon = {
+      command: { type: "summonCreature" as const, side: "cpu" as const, handInstanceId: "recruit", destination: { column: 5, row: 1 } },
+      label: "Summon Recruit",
+      scoreHint: 2
+    };
+    const attacker = visibleCard("attacker", "cpu", 3, 4, { column: 5, row: 4 });
+    const visible = tacticalVisible([summon, buff], [attacker], [visibleSpell("war-cry", "AK-008"), visibleCard("recruit", "cpu", 2, 2)]);
+    const buffedAttacker = { ...attacker, attack: 5 };
+
+    const decision = chooseCpuAction(visible, (action) =>
+      action === buff ? { ...visible, boardCards: [buffedAttacker] } : visible
+    );
+
+    expect(decision).toMatchObject({ kind: "command", command: buff.command });
+    if (decision.kind === "command") {
+      expect(decision.score.reasons).toContain("maximize-board-attack");
+      expect(decision.score.reasons).toContain("board-synergy");
+    }
+  });
+
   it("returns a stop reason when no legal actions exist", () => {
     const bases = createInitialBattleBases();
     const visible: CpuVisibleState = {
@@ -231,6 +306,9 @@ describe("CPU strategy", () => {
       playerHandCount: 5,
       cpuDeckCount: 35,
       playerDeckCount: 35,
+      cpuCurrentPp: 1,
+      cpuMaxPp: 1,
+      cpuResonance: createEmptyResonance(),
       bases: BATTLE_BASE_IDS.map((id) => bases[id]),
       boardCards: [],
       legalActions: []
@@ -394,6 +472,9 @@ function tacticalVisible(
     playerHandCount: 3,
     cpuDeckCount: 20,
     playerDeckCount: 20,
+    cpuCurrentPp: 5,
+    cpuMaxPp: 5,
+    cpuResonance: createEmptyResonance(),
     bases: BATTLE_BASE_IDS.map((id) => bases[id]),
     boardCards,
     legalActions
@@ -409,11 +490,33 @@ function visibleCard(
 ): CpuVisibleCard {
   return {
     instanceId,
+    catalogCardId: instanceId,
     name: instanceId,
     type: "creature",
     side,
+    attribute: "fire",
+    currentCost: 1,
     attack,
     hp,
+    maxHp: hp,
+    movement: 1,
+    isToken: false,
+    effectIds: [],
     position
+  };
+}
+
+function visibleSpell(instanceId: string, catalogCardId: string): CpuVisibleCard {
+  return {
+    instanceId,
+    catalogCardId,
+    name: instanceId,
+    type: "spell",
+    side: "cpu",
+    attribute: "water",
+    currentCost: 3,
+    movement: 0,
+    isToken: false,
+    effectIds: [catalogCardId]
   };
 }

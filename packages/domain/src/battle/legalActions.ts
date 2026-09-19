@@ -267,6 +267,17 @@ function spellActions(state: BattleState, side: BattleSide, card: BattleCardInst
   if (choices.length === 0) return legalSpellAction(state, { type: "castSpell", side, handInstanceId: card.instanceId }, card);
   const structured = choices[0];
   if (structured && structured.candidates.some((candidate) => candidate.kind === "lane" || candidate.kind === "coordinate" || candidate.kind === "graveyard")) {
+    // Lane-wide buffs and damage must expose every legal lane to the CPU.
+    // Selecting only the first candidate made their value depend on board
+    // enumeration order rather than the tactical state being evaluated.
+    if (card.catalogCardId === "AK-008" || card.catalogCardId === "AK-011") {
+      return structured.candidates
+        .filter((candidate) => candidate.kind === "lane")
+        .flatMap((candidate) => legalSpellAction(state, {
+          type: "castSpell", side, handInstanceId: card.instanceId,
+          effectSelection: { lane: candidate.id as import("./types").BattleLane }
+        }, card));
+    }
     const take = (kind: PublicEffectCandidate["kind"], count: number) => structured.candidates.filter((candidate) => candidate.kind === kind).slice(0, count).map((candidate) => candidate.id);
     const lane = take("lane", 1)[0]; const creatures = take("creature", 1); const graves = take("graveyard", card.catalogCardId === "AK-054" || card.catalogCardId === "AK-059" ? 2 : 0);
     const coordinateCandidates = structured.candidates.filter((candidate) => candidate.kind === "coordinate");

@@ -1,6 +1,7 @@
 import {
   assertCpuVisibleStateIsRedacted,
-  projectCpuVisibleState
+  projectCpuVisibleState,
+  redactCpuForecastHand
 } from "@ankake/cpu";
 import {
   generateLegalActions,
@@ -112,6 +113,24 @@ describe("CPU visible state", () => {
       ),
       { numRuns: 40 }
     );
+  });
+
+  it("keeps forecast-only draws anonymous until the command actually resolves", () => {
+    const state = fc.sample(battleStateArbitrary, { numRuns: 1 })[0]!;
+    const visible = projectCpuVisibleState(state, []);
+    const existing = visible.cpuHand[0];
+    const forecast = {
+      ...visible,
+      cpuHandCount: visible.cpuHandCount + 1,
+      cpuHand: existing
+        ? [...visible.cpuHand, { ...existing, instanceId: "future-deck-card" }]
+        : visible.cpuHand
+    };
+
+    const redacted = redactCpuForecastHand(forecast, visible.cpuHand.map((card) => card.instanceId));
+
+    expect(redacted.cpuHandCount).toBe(visible.cpuHandCount + 1);
+    expect(redacted.cpuHand.map((card) => card.instanceId)).toEqual(visible.cpuHand.map((card) => card.instanceId));
   });
 
   it("projects public movement actionability without leaking a web-owned path draft", () => {
