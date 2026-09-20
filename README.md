@@ -29,7 +29,9 @@ npm run dev
 
 ### ローカルオンライン対戦
 
-`npx supabase start` の出力から`Project URL`と`Publishable`を確認し、`.env.example` をコピーして `.env.local` に設定します。ローカル環境では**オンライン対戦**を選ぶと、待機相手を探さずCPUとの対戦を作成します。人間同士のマッチングは本番Supabase用の機能です。
+`npx supabase start` の出力から`Project URL`と`Publishable`を確認し、`.env.example` をコピーして `.env.local` に設定します。ローカル環境では**オンライン対戦**を選ぶと、待機相手を探さずSupabase Edge Function上のCPUとの対戦を作成します。
+
+対局の開始、プレイヤー操作、CPU操作、勝敗確定はすべて `local-cpu-match` Edge Function を経由します。ブラウザは対局状態を直接更新せず、サーバーが保持・検証した状態とイベントを受信して表示します。人間同士のマッチングとRealtime同期は未実装です。
 
 ```bash
 npx supabase stop

@@ -1066,6 +1066,56 @@ describe("battle screen", () => {
     });
   });
 
+  it("submits online resignation through the remote battle transport", async () => {
+    const state = createBattleScreenState();
+    const terminalState: BattleState = {
+      ...state,
+      phase: "terminal",
+      terminalResult: {
+        winner: "cpu",
+        loser: "player",
+        reason: "quit",
+        turnNumber: state.metadata.turnNumber,
+        elapsedSeconds: state.metadata.elapsedSeconds,
+        finalEventSequence: state.eventCursor + 1
+      }
+    };
+    const submitCommand = vi.fn().mockResolvedValue({
+      ok: true,
+      state: terminalState,
+      events: [{
+        sequence: state.eventCursor + 1,
+        type: "battle.ended",
+        side: "cpu",
+        message: "CPU won after the opponent quit."
+      }]
+    });
+    const onReturnToOnlinePreparation = vi.fn();
+    const { result } = renderHook(() => useBattleController({
+      catalog: validCatalogSnapshotFixture,
+      repository: {} as DeckRepository,
+      onReturnToMenu: vi.fn(),
+      onlineBattle: {
+        initialState: state,
+        initialEvents: [],
+        submitCommand
+      },
+      onReturnToOnlinePreparation
+    }));
+
+    await act(async () => {
+      await result.current.actions.resignBattle();
+    });
+
+    expect(submitCommand).toHaveBeenCalledWith({ type: "resign", side: "player" });
+    expect(result.current.viewModel).toMatchObject({
+      kind: "battle",
+      publicView: { terminalResult: { winner: "cpu", loser: "player", reason: "quit" } }
+    });
+    act(() => result.current.actions.quitBattle());
+    expect(onReturnToOnlinePreparation).toHaveBeenCalledTimes(1);
+  });
+
   it("resolves a no-target summon when its destination is clicked", async () => {
     const initialState = createBattleScreenState();
     const creature = Object.values(initialState.cardInstances).find(

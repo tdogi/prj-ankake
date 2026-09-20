@@ -4,6 +4,8 @@ import {
   type BattleCardView,
   type BattleEvent,
   type BattleLogEntry,
+  type BattleState,
+  type BattleValidationIssue,
   type BoardCoordinate,
   type FirstPlayerMode,
   type StaticCatalogSnapshot
@@ -34,6 +36,7 @@ import {
   type BattleInteractionView
 } from "./battleInteraction";
 import {
+  applyRemoteBattleUpdate,
   attemptRuntimeCommand,
   createBattleRuntimeSession,
   executeCpuTurn,
@@ -97,6 +100,17 @@ export interface BattleControllerInput {
   readonly repository: DeckRepository;
   readonly onReturnToMenu: () => void;
   readonly initialPlayerDeckId?: string;
+  readonly onlineBattle?: OnlineBattleTransport;
+  readonly onReturnToOnlinePreparation?: () => void;
+}
+
+export interface OnlineBattleTransport {
+  readonly initialState: BattleState;
+  readonly initialEvents: readonly BattleEvent[];
+  submitCommand(command: BattleCommand): Promise<
+    | { readonly ok: true; readonly state: BattleState; readonly events: readonly BattleEvent[] }
+    | { readonly ok: false; readonly issues: readonly BattleValidationIssue[] }
+  >;
 }
 
 type CpuStatus = "idle" | "thinking" | "executing" | "completed" | "limit-reached";
@@ -124,7 +138,11 @@ export function useBattleController(input: BattleControllerInput): BattleControl
     firstPlayerMode: "random",
     loading: true
   });
-  const [session, setSession] = useState<BattleRuntimeSession | undefined>();
+  const [session, setSession] = useState<BattleRuntimeSession | undefined>(() =>
+    input.onlineBattle
+      ? createBattleRuntimeSession(input.onlineBattle.initialState, input.onlineBattle.initialEvents)
+      : undefined
+  );
   const [interaction, setInteraction] = useState<BattleInteractionState>(
     IDLE_BATTLE_INTERACTION
   );
@@ -139,6 +157,7 @@ export function useBattleController(input: BattleControllerInput): BattleControl
   const [isAnimating, setIsAnimating] = useState(false);
 
   useEffect(() => {
+    if (input.onlineBattle) return;
     let cancelled = false;
     loadBattlePreparation(input.repository, input.initialPlayerDeckId).then((next) => {
       if (!cancelled) {
@@ -148,7 +167,7 @@ export function useBattleController(input: BattleControllerInput): BattleControl
     return () => {
       cancelled = true;
     };
-  }, [input.initialPlayerDeckId, input.repository]);
+  }, [input.initialPlayerDeckId, input.onlineBattle, input.repository]);
 
   useEffect(() => {
     if (!isBattleInteractionPending(interaction)) {
@@ -178,6 +197,7 @@ export function useBattleController(input: BattleControllerInput): BattleControl
   }, [session]);
 
   async function startSelectedBattle(): Promise<void> {
+    if (input.onlineBattle) return;
     const disabledReason = getBattleStartDisabledReason(preparation);
     if (disabledReason || !preparation.playerDeckId || !preparation.cpuDeckId) {
       setPreparation({
@@ -229,6 +249,20 @@ export function useBattleController(input: BattleControllerInput): BattleControl
       return;
     }
 
+    if (input.onlineBattle) {
+      const remote = await input.onlineBattle.submitCommand(command);
+      if (!remote.ok) {
+        setLastValidationIssueCode(remote.issues[0]?.code);
+        return;
+      }
+      const nextSession = applyRemoteBattleUpdate(session, remote.state, remote.events);
+      setLastValidationIssueCode(undefined);
+      await playBattleEvents(nextSession.lastEvents, session, nextSession);
+      setSession(nextSession);
+      setCpuStatus(nextSession.state.terminalResult ? "completed" : "idle");
+      return;
+    }
+
     const attempted = attemptRuntimeCommand(session, command, diagnostics);
     if (!attempted.ok) {
       setLastValidationIssueCode(attempted.issues[0]?.code);
@@ -258,6 +292,10 @@ export function useBattleController(input: BattleControllerInput): BattleControl
   }
 
   async function runCpuIfNeeded(nextSession: BattleRuntimeSession): Promise<void> {
+    if (input.onlineBattle) {
+      setCpuStatus(nextSession.state.terminalResult ? "completed" : "idle");
+      return;
+    }
     if (nextSession.state.phase !== "play" || nextSession.state.activeSide !== "cpu") {
       if (nextSession.state.phase === "terminal" || nextSession.state.terminalResult) {
         setInteraction(IDLE_BATTLE_INTERACTION);
@@ -289,6 +327,10 @@ export function useBattleController(input: BattleControllerInput): BattleControl
 
   async function rematch(): Promise<void> {
     if (isAnimating) return;
+    if (input.onlineBattle) {
+      input.onReturnToOnlinePreparation?.();
+      return;
+    }
     setInteraction(IDLE_BATTLE_INTERACTION);
     setLastValidationIssueCode(undefined);
     setSession(undefined);
@@ -297,6 +339,10 @@ export function useBattleController(input: BattleControllerInput): BattleControl
 
   function quitBattle(): void {
     if (isAnimating) return;
+    if (input.onlineBattle) {
+      input.onReturnToOnlinePreparation?.();
+      return;
+    }
     setInteraction(IDLE_BATTLE_INTERACTION);
     setLastValidationIssueCode(undefined);
     setSession(undefined);
@@ -304,6 +350,12 @@ export function useBattleController(input: BattleControllerInput): BattleControl
 
   async function resignBattle(): Promise<void> {
     if (!session || isAnimating) return;
+
+    if (input.onlineBattle) {
+      setInteraction(IDLE_BATTLE_INTERACTION);
+      await submitCommand({ type: "resign", side: "player" });
+      return;
+    }
 
     // A resignation remains valid while the CPU is preparing its turn.  Stop
     // that deferred execution before resolving the terminal result.
@@ -459,6 +511,28 @@ export function useBattleController(input: BattleControllerInput): BattleControl
     if (!preparation.ok) {
       setLastValidationIssueCode(undefined);
       setInteraction(preparation.interaction);
+      return;
+    }
+
+    if (input.onlineBattle) {
+      const remote = await input.onlineBattle.submitCommand(preparation.command);
+      if (!remote.ok) {
+        setLastValidationIssueCode(remote.issues[0]?.code);
+        setInteraction({
+          ...interactionToConfirm,
+          issue: {
+            code: remote.issues[0]?.code ?? "battle.effect.no-target",
+            message: remote.issues[0]?.message ?? "The online battle command was rejected."
+          }
+        });
+        return;
+      }
+      const nextSession = applyRemoteBattleUpdate(session, remote.state, remote.events);
+      setInteraction(IDLE_BATTLE_INTERACTION);
+      setLastValidationIssueCode(undefined);
+      await playBattleEvents(nextSession.lastEvents, session, nextSession);
+      setSession(nextSession);
+      setCpuStatus(nextSession.state.terminalResult ? "completed" : "idle");
       return;
     }
 

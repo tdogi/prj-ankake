@@ -19,7 +19,7 @@ const repository = new InMemoryDeckRepository({
 function LocalizedOnlineScreen() {
   const [locale, setLocale] = useState<"ja" | "en">("en");
   const displayNameRepository = useMemo(() => new MemoryDisplayNameRepository(), []);
-  return <OnlineBattlePreparationScreen repository={repository} displayNameRepository={displayNameRepository} locale={locale} onLocaleChange={setLocale} onReturn={vi.fn()} onMatched={vi.fn()} />;
+  return <OnlineBattlePreparationScreen repository={repository} displayNameRepository={displayNameRepository} catalog={validCatalogSnapshotFixture} locale={locale} onLocaleChange={setLocale} onReturn={vi.fn()} onMatched={vi.fn()} />;
 }
 
 class MemoryDisplayNameRepository implements OnlineDisplayNameRepository {
@@ -67,7 +67,7 @@ describe("online battle preparation screen", () => {
 
   it("restores and overwrites only the latest local display name", async () => {
     const displayNameRepository = new MemoryDisplayNameRepository("Remembered Player");
-    render(<OnlineBattlePreparationScreen repository={repository} displayNameRepository={displayNameRepository} locale="en" onLocaleChange={vi.fn()} onReturn={vi.fn()} onMatched={vi.fn()} />);
+    render(<OnlineBattlePreparationScreen repository={repository} displayNameRepository={displayNameRepository} catalog={validCatalogSnapshotFixture} locale="en" onLocaleChange={vi.fn()} onReturn={vi.fn()} onMatched={vi.fn()} />);
 
     const input = screen.getByLabelText("Display name");
     await waitFor(() => expect(input).toHaveValue("Remembered Player"));
@@ -75,5 +75,32 @@ describe("online battle preparation screen", () => {
     await waitFor(() => expect(displayNameRepository.value).toBe("Latest Player"));
     fireEvent.change(input, { target: { value: "" } });
     await waitFor(() => expect(displayNameRepository.value).toBe(""));
+  });
+
+  it("creates the local CPU opponent through the online battle API", async () => {
+    vi.stubEnv("VITE_SUPABASE_URL", "http://127.0.0.1:54321");
+    vi.stubEnv("VITE_SUPABASE_PUBLISHABLE_KEY", "local-key");
+    const onMatched = vi.fn();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ battleId: "battle-id", accessToken: "access-token", state: {}, events: [] })
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      render(<OnlineBattlePreparationScreen repository={repository} displayNameRepository={new MemoryDisplayNameRepository()} catalog={validCatalogSnapshotFixture} locale="en" onLocaleChange={vi.fn()} onReturn={vi.fn()} onMatched={onMatched} />);
+      await screen.findByTestId("online-battle-deck-selector");
+      fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "Player One" } });
+      fireEvent.click(screen.getByTestId("online-match-start-button"));
+
+      await waitFor(() => expect(onMatched).toHaveBeenCalledTimes(1));
+      expect(fetchMock).toHaveBeenCalledWith(
+        "http://127.0.0.1:54321/functions/v1/local-cpu-match",
+        expect.objectContaining({ method: "POST" })
+      );
+      expect(JSON.parse(fetchMock.mock.calls[0]![1].body)).toMatchObject({ operation: "start", playerName: "Player One" });
+    } finally {
+      vi.unstubAllEnvs();
+      vi.unstubAllGlobals();
+    }
   });
 });

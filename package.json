@@ -10,7 +10,8 @@
   ],
   "scripts": {
     "dev": "npm run dev -w @ankake/web",
-    "build": "npm run build -w @ankake/web",
+    "build": "npm run build:edge-function && npm run build -w @ankake/web",
+    "build:edge-function": "esbuild packages/domain/src/battle/index.ts --bundle --format=esm --platform=neutral --target=es2022 --outfile=supabase/functions/_shared/domain-battle.js",
     "preview": "npm run preview -w @ankake/web",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run typecheck",

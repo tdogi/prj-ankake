@@ -1,20 +1,30 @@
-import { type SavedDeckSummary } from "@ankake/domain";
+import { type SavedDeckSummary, type StaticCatalogSnapshot } from "@ankake/domain";
 import type { DeckRepository, OnlineDisplayNameRepository } from "@ankake/persistence";
 import { BackgroundScene, BattleDeckSelector, uiText, type UiLocale } from "@ankake/ui";
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  startOnlineCpuBattle,
+  type OnlineCpuBattleConnection,
+  type OnlineCpuBattlePreferences
+} from "./localCpuBattleClient";
 
 export interface OnlineBattlePreparationScreenProps {
   readonly repository: DeckRepository;
   readonly displayNameRepository: OnlineDisplayNameRepository;
+  readonly catalog: StaticCatalogSnapshot;
   readonly locale: UiLocale;
   readonly onLocaleChange: (locale: UiLocale) => void;
   readonly onReturn: () => void;
-  readonly onMatched: (playerDeckId: string) => void;
+  readonly initialPreferences?: OnlineCpuBattlePreferences;
+  readonly onMatched: (connection: OnlineCpuBattleConnection, preferences: OnlineCpuBattlePreferences) => void;
 }
 
 export function OnlineBattlePreparationScreen(props: OnlineBattlePreparationScreenProps) {
-  const [name, setName] = usePersistedDisplayName(props.displayNameRepository);
-  const [passphrase, setPassphrase] = useState("");
+  const [name, setName] = usePersistedDisplayName(
+    props.displayNameRepository,
+    props.initialPreferences?.displayName
+  );
+  const [passphrase, setPassphrase] = useState(props.initialPreferences?.passphrase ?? "");
   const [deckOptions, setDeckOptions] = useState<readonly SavedDeckSummary[]>([]);
   const [selectedDeckId, setSelectedDeckId] = useState<string>();
   const [loadingDecks, setLoadingDecks] = useState(true);
@@ -25,6 +35,7 @@ export function OnlineBattlePreparationScreen(props: OnlineBattlePreparationScre
 
   useEffect(() => {
     let cancelled = false;
+    const preferredDeckId = props.initialPreferences?.playerDeckId;
     props.repository.listDecks().then((result) => {
       if (cancelled) return;
       if (!result.ok) {
@@ -33,12 +44,16 @@ export function OnlineBattlePreparationScreen(props: OnlineBattlePreparationScre
         return;
       }
       setDeckOptions(result.value);
-      setSelectedDeckId(result.value.find((deck) => deck.battleReady)?.deckId);
+      setSelectedDeckId(
+        result.value.some((deck) => deck.deckId === preferredDeckId && deck.battleReady)
+          ? preferredDeckId
+          : result.value.find((deck) => deck.battleReady)?.deckId
+      );
       setLoadingDecks(false);
       nameInputRef.current?.focus();
     });
     return () => { cancelled = true; };
-  }, [props.repository]);
+  }, [props.initialPreferences?.playerDeckId, props.repository]);
 
   const selectedDeck = useMemo(
     () => deckOptions.find((deck) => deck.deckId === selectedDeckId),
@@ -48,25 +63,24 @@ export function OnlineBattlePreparationScreen(props: OnlineBattlePreparationScre
 
   async function match(): Promise<void> {
     if (startDisabledReason || !selectedDeck) return;
-    const url = import.meta.env.VITE_SUPABASE_URL;
-    const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-    if (!url || !key) { setStatus("config-error"); return; }
     setMatching(true);
     setStatus(undefined);
     try {
-      const response = await fetch(`${url}/functions/v1/local-cpu-match`, {
-        method: "POST",
-        headers: { apikey: key, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          playerName: name.trim(),
-          passphrase,
-          gameState: { mode: "local-cpu" }
-        })
+      const deckResult = await props.repository.loadDeck(selectedDeck.deckId);
+      if (!deckResult.ok) throw new Error("Selected deck could not be loaded.");
+      const connection = await startOnlineCpuBattle({
+        playerName: name.trim(),
+        passphrase,
+        playerDeck: deckResult.value,
+        catalog: props.catalog
       });
-      if (!response.ok) throw new Error();
-      props.onMatched(selectedDeck.deckId);
+      props.onMatched(connection, {
+        displayName: name.trim(),
+        passphrase,
+        playerDeckId: selectedDeck.deckId
+      });
     } catch {
-      setStatus("match-failed");
+      setStatus(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ? "match-failed" : "config-error");
       setMatching(false);
     }
   }
@@ -114,8 +128,8 @@ export function OnlineBattlePreparationScreen(props: OnlineBattlePreparationScre
   );
 }
 
-function usePersistedDisplayName(repository: OnlineDisplayNameRepository): readonly [string, (value: string) => void] {
-  const [name, setName] = useState("");
+function usePersistedDisplayName(repository: OnlineDisplayNameRepository, initialName?: string): readonly [string, (value: string) => void] {
+  const [name, setName] = useState(initialName ?? "");
   const hasEdited = useRef(false);
   const saveQueue = useRef<Promise<unknown>>(Promise.resolve());
 

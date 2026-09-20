@@ -24,12 +24,18 @@ import { createUow001DestinationCapabilities } from "./routes/routes";
 import { runStartup } from "./startup/startupOrchestrator";
 import { OnlineBattlePreparationScreen } from "./online/OnlineBattlePreparationScreen";
 import { IndexedDbOnlineDisplayNameRepository } from "@ankake/persistence";
+import {
+  submitOnlineCpuBattleCommand,
+  type OnlineCpuBattleConnection,
+  type OnlineCpuBattlePreferences
+} from "./online/localCpuBattleClient";
 
 export function AppShell() {
   const destinationCapabilities = useMemo(() => createUow001DestinationCapabilities(), []);
   const [snapshot, dispatch] = useReducer(appStateReducer, createInitialAppSnapshot());
   const [locale, setLocale] = useState<AppLocale>("ja");
-  const [onlineBattleDeckId, setOnlineBattleDeckId] = useState<string>();
+  const [onlineBattle, setOnlineBattle] = useState<OnlineCpuBattleConnection>();
+  const [onlinePreferences, setOnlinePreferences] = useState<OnlineCpuBattlePreferences>();
   const viewModel = projectMenuViewModel(snapshot, destinationCapabilities);
 
   useEffect(() => {
@@ -70,7 +76,8 @@ export function AppShell() {
   }
 
   function handleReturnToMenu(): void {
-    setOnlineBattleDeckId(undefined);
+    setOnlineBattle(undefined);
+    setOnlinePreferences(undefined);
     dispatch({
       type: "route-selected",
       routeId: "menu"
@@ -82,10 +89,14 @@ export function AppShell() {
   }
 
   if (snapshot.kind === "ready" && snapshot.currentRoute === "battle-preparation") {
-    return <BattleRoute catalog={snapshot.catalog} locale={locale} onReturnToMenu={handleReturnToMenu} autoStart={Boolean(onlineBattleDeckId)} initialPlayerDeckId={onlineBattleDeckId} />;
+    return <BattleRoute catalog={snapshot.catalog} locale={locale} onReturnToMenu={handleReturnToMenu} />;
   }
   if (snapshot.kind === "ready" && snapshot.currentRoute === "online-battle-preparation") {
-    return <OnlineBattleRoute catalog={snapshot.catalog} locale={locale} onLocaleChange={setLocale} onReturn={handleReturnToMenu} onMatched={(playerDeckId) => { setOnlineBattleDeckId(playerDeckId); dispatch({ type: "route-selected", routeId: "battle-preparation" }); }} />;
+    return <OnlineBattleRoute catalog={snapshot.catalog} locale={locale} initialPreferences={onlinePreferences} onLocaleChange={setLocale} onReturn={handleReturnToMenu} onMatched={(connection, preferences) => { setOnlineBattle(connection); setOnlinePreferences(preferences); dispatch({ type: "route-selected", routeId: "battle" }); }} />;
+  }
+
+  if (snapshot.kind === "ready" && snapshot.currentRoute === "battle" && onlineBattle) {
+    return <BattleRoute catalog={snapshot.catalog} locale={locale} onReturnToMenu={handleReturnToMenu} onlineBattle={onlineBattle} onReturnToOnlinePreparation={() => { setOnlineBattle(undefined); dispatch({ type: "route-selected", routeId: "online-battle-preparation" }); }} />;
   }
 
   return (
@@ -96,10 +107,10 @@ export function AppShell() {
   );
 }
 
-function OnlineBattleRoute({ catalog, locale, onLocaleChange, onReturn, onMatched }: { readonly catalog: StaticCatalogSnapshot; readonly locale: AppLocale; readonly onLocaleChange: (locale: AppLocale) => void; readonly onReturn: () => void; readonly onMatched: (playerDeckId: string) => void }) {
+function OnlineBattleRoute({ catalog, locale, initialPreferences, onLocaleChange, onReturn, onMatched }: { readonly catalog: StaticCatalogSnapshot; readonly locale: AppLocale; readonly initialPreferences?: OnlineCpuBattlePreferences; readonly onLocaleChange: (locale: AppLocale) => void; readonly onReturn: () => void; readonly onMatched: (connection: OnlineCpuBattleConnection, preferences: OnlineCpuBattlePreferences) => void }) {
   const repository = useMemo(() => createDeckRepository(catalog), [catalog]);
   const displayNameRepository = useMemo(() => new IndexedDbOnlineDisplayNameRepository(), []);
-  return <OnlineBattlePreparationScreen repository={repository} displayNameRepository={displayNameRepository} locale={locale} onLocaleChange={onLocaleChange} onReturn={onReturn} onMatched={onMatched} />;
+  return <OnlineBattlePreparationScreen repository={repository} displayNameRepository={displayNameRepository} catalog={catalog} initialPreferences={initialPreferences} locale={locale} onLocaleChange={onLocaleChange} onReturn={onReturn} onMatched={onMatched} />;
 }
 
 interface BattleRouteProps {
@@ -108,22 +119,32 @@ interface BattleRouteProps {
   readonly onReturnToMenu: () => void;
   readonly autoStart?: boolean;
   readonly initialPlayerDeckId?: string;
+  readonly onlineBattle?: OnlineCpuBattleConnection;
+  readonly onReturnToOnlinePreparation?: () => void;
 }
 
-function BattleRoute({ catalog, locale, onReturnToMenu, autoStart, initialPlayerDeckId }: BattleRouteProps) {
+function BattleRoute({ catalog, locale, onReturnToMenu, autoStart, initialPlayerDeckId, onlineBattle, onReturnToOnlinePreparation }: BattleRouteProps) {
   const repository = useMemo(() => createDeckRepository(catalog), [catalog]);
   const hasAutoStarted = useRef(false);
   const controller = useBattleController({
     catalog,
     repository,
     onReturnToMenu,
-    initialPlayerDeckId
+    initialPlayerDeckId,
+    ...(onlineBattle ? {
+      onlineBattle: {
+        initialState: onlineBattle.state,
+        initialEvents: onlineBattle.events,
+        submitCommand: (command) => submitOnlineCpuBattleCommand(onlineBattle, command)
+      },
+      onReturnToOnlinePreparation
+    } : {})
   });
   useEffect(() => {
-    if (hasAutoStarted.current || !autoStart || controller.viewModel.kind !== "preparation" || controller.viewModel.preparation.loading || controller.viewModel.startDisabledReason) return;
+    if (onlineBattle || hasAutoStarted.current || !autoStart || controller.viewModel.kind !== "preparation" || controller.viewModel.preparation.loading || controller.viewModel.startDisabledReason) return;
     hasAutoStarted.current = true;
     void controller.actions.startBattle();
-  }, [autoStart, controller]);
+  }, [autoStart, controller, onlineBattle]);
 
   if (controller.viewModel.kind === "preparation") {
     return (
