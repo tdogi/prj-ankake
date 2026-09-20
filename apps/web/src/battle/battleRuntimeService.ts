@@ -59,6 +59,19 @@ export function createBattleRuntimeSession(
   };
 }
 
+/** Applies an authoritative state received from the online battle server. */
+export function applyRemoteBattleUpdate(
+  session: BattleRuntimeSession,
+  state: BattleState,
+  events: readonly BattleEvent[]
+): BattleRuntimeSession {
+  return {
+    state,
+    log: appendBattleLogEntries(session.log, events, state.terminalResult, state),
+    lastEvents: events
+  };
+}
+
 export function submitRuntimeCommand(
   session: BattleRuntimeSession,
   command: BattleCommand,

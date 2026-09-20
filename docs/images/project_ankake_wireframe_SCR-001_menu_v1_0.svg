@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" role="img" aria-labelledby="title desc">
   <title id="title">Project Ankake メニュー画面ワイヤーフレーム</title>
-  <desc id="desc">上部に正式ロゴ、中央にCPU対戦とデッキ構築のボタン、背景に三つのレーンと拠点を抽象化した戦場を配置したメニュー画面。</desc>
+  <desc id="desc">上部に正式ロゴ、中央にCPU対戦、オンライン対戦、デッキ構築のボタン、背景に三つのレーンと拠点を抽象化した戦場を配置したメニュー画面。</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#0b1020"/>
@@ -76,17 +76,17 @@
 
   <!-- AREA-003: メニュー領域 -->
   <g filter="url(#shadow)">
-    <rect x="500" y="350" width="920" height="510" rx="42" fill="url(#panel)"/>
-    <rect x="500" y="350" width="920" height="510" rx="42" fill="none" stroke="#93a5d2" stroke-opacity="0.28" stroke-width="2"/>
+    <rect x="500" y="350" width="920" height="570" rx="42" fill="url(#panel)"/>
+    <rect x="500" y="350" width="920" height="570" rx="42" fill="none" stroke="#93a5d2" stroke-opacity="0.28" stroke-width="2"/>
   </g>
 
   <!-- BTN-001: CPU対戦 -->
   <g id="BTN-001" filter="url(#shadow)">
-    <rect x="610" y="438" width="700" height="152" rx="30" fill="url(#primary)"/>
-    <rect x="610" y="438" width="700" height="152" rx="30" fill="none" stroke="#e7e6ff" stroke-opacity="0.48" stroke-width="2"/>
-    <circle cx="703" cy="514" r="50" fill="#ffffff" opacity="0.13"/>
+    <rect x="610" y="574" width="700" height="140" rx="30" fill="url(#primary)"/>
+    <rect x="610" y="574" width="700" height="140" rx="30" fill="none" stroke="#e7e6ff" stroke-opacity="0.48" stroke-width="2"/>
+    <circle cx="703" cy="644" r="50" fill="#ffffff" opacity="0.13"/>
     <!-- 正式アイコン: 剣＋CPU回路 -->
-    <g transform="translate(672 483)" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <g transform="translate(672 613)" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
       <path d="M6 57 L54 9 L62 17 L14 65 Z"/>
       <path d="M42 8 L63 6 L61 27"/>
       <path d="M5 48 L22 65"/>
@@ -94,24 +94,38 @@
       <path d="M47 34 V27 M60 34 V27 M47 81 V74 M60 81 V74 M34 47 H27 M34 60 H27 M81 47 H74 M81 60 H74"/>
       <circle cx="49" cy="50" r="2" fill="#ffffff" stroke="none"/><circle cx="60" cy="50" r="2" fill="#ffffff" stroke="none"/>
     </g>
-    <text x="790" y="507" fill="#ffffff" font-family="Noto Sans CJK JP, sans-serif" font-size="42" font-weight="700">CPU対戦</text>
-    <text x="790" y="550" fill="#e3eaff" font-family="Noto Sans CJK JP, sans-serif" font-size="22">デッキを選択して対戦を開始</text>
+    <text x="790" y="637" fill="#ffffff" font-family="Noto Sans CJK JP, sans-serif" font-size="42" font-weight="700">CPU対戦</text>
+    <text x="790" y="680" fill="#e3eaff" font-family="Noto Sans CJK JP, sans-serif" font-size="22">デッキを選択して対戦を開始</text>
+  </g>
+
+  <!-- BTN-003: オンライン対戦 -->
+  <g id="BTN-003" filter="url(#shadow)">
+    <rect x="610" y="404" width="700" height="132" rx="28" fill="url(#primary)"/>
+    <rect x="610" y="404" width="700" height="132" rx="28" fill="none" stroke="#e7e6ff" stroke-opacity="0.48" stroke-width="2"/>
+    <circle cx="703" cy="470" r="46" fill="#ffffff" opacity="0.13"/>
+    <g transform="translate(672 436)" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="23" cy="20" r="12"/><circle cx="62" cy="20" r="12"/>
+      <path d="M4 62 C6 43 39 43 42 62 M43 62 C46 43 79 43 81 62"/>
+      <path d="M31 28 H54" stroke="#bff3ff"/>
+    </g>
+    <text x="790" y="463" fill="#ffffff" font-family="Noto Sans CJK JP, sans-serif" font-size="38" font-weight="700">オンライン対戦</text>
+    <text x="790" y="502" fill="#e3eaff" font-family="Noto Sans CJK JP, sans-serif" font-size="21">ほかのプレイヤーと対戦</text>
   </g>
 
   <!-- BTN-002: デッキ構築 -->
   <g id="BTN-002" filter="url(#shadow)">
-    <rect x="610" y="632" width="700" height="132" rx="28" fill="url(#secondary)"/>
-    <rect x="610" y="632" width="700" height="132" rx="28" fill="none" stroke="#9daed3" stroke-opacity="0.38" stroke-width="2"/>
-    <circle cx="703" cy="698" r="46" fill="#ffffff" opacity="0.08"/>
+    <rect x="610" y="748" width="700" height="132" rx="28" fill="url(#secondary)"/>
+    <rect x="610" y="748" width="700" height="132" rx="28" fill="none" stroke="#9daed3" stroke-opacity="0.38" stroke-width="2"/>
+    <circle cx="703" cy="814" r="46" fill="#ffffff" opacity="0.08"/>
     <!-- 正式アイコン: 重なったカード -->
-    <g transform="translate(670 661)" fill="none" stroke="#e8efff" stroke-width="5" stroke-linejoin="round">
+    <g transform="translate(670 777)" fill="none" stroke="#e8efff" stroke-width="5" stroke-linejoin="round">
       <rect x="8" y="6" width="54" height="72" rx="8" transform="rotate(-9 35 42)"/>
       <rect x="24" y="8" width="54" height="72" rx="8" fill="#26344f"/>
       <rect x="34" y="19" width="34" height="29" rx="5"/>
       <path d="M35 59 H65 M35 68 H58"/>
     </g>
-    <text x="790" y="691" fill="#f4f7ff" font-family="Noto Sans CJK JP, sans-serif" font-size="38" font-weight="700">デッキ構築</text>
-    <text x="790" y="730" fill="#b9c6dc" font-family="Noto Sans CJK JP, sans-serif" font-size="21">カードを選んでデッキを編集</text>
+    <text x="790" y="807" fill="#f4f7ff" font-family="Noto Sans CJK JP, sans-serif" font-size="38" font-weight="700">デッキ構築</text>
+    <text x="790" y="846" fill="#b9c6dc" font-family="Noto Sans CJK JP, sans-serif" font-size="21">カードを選んでデッキを編集</text>
   </g>
 
   <!-- AREA-004: バージョン情報 -->
@@ -119,11 +133,14 @@
 
   <!-- ワイヤーフレーム注釈 -->
   <g font-family="Noto Sans CJK JP, sans-serif" font-size="17">
-    <rect x="1350" y="462" width="142" height="34" rx="8" fill="#080d16" opacity="0.92"/>
-    <text x="1421" y="485" text-anchor="middle" fill="#dbe4f5">BTN-001</text>
-    <line x1="1350" y1="479" x2="1310" y2="500" stroke="#dbe4f5" stroke-width="2"/>
-    <rect x="1350" y="654" width="142" height="34" rx="8" fill="#080d16" opacity="0.92"/>
-    <text x="1421" y="677" text-anchor="middle" fill="#dbe4f5">BTN-002</text>
-    <line x1="1350" y1="671" x2="1310" y2="692" stroke="#dbe4f5" stroke-width="2"/>
+    <rect x="1350" y="428" width="142" height="34" rx="8" fill="#080d16" opacity="0.92"/>
+    <text x="1421" y="451" text-anchor="middle" fill="#dbe4f5">BTN-003</text>
+    <line x1="1350" y1="445" x2="1310" y2="460" stroke="#dbe4f5" stroke-width="2"/>
+    <rect x="1350" y="598" width="142" height="34" rx="8" fill="#080d16" opacity="0.92"/>
+    <text x="1421" y="621" text-anchor="middle" fill="#dbe4f5">BTN-001</text>
+    <line x1="1350" y1="615" x2="1310" y2="630" stroke="#dbe4f5" stroke-width="2"/>
+    <rect x="1350" y="772" width="142" height="34" rx="8" fill="#080d16" opacity="0.92"/>
+    <text x="1421" y="795" text-anchor="middle" fill="#dbe4f5">BTN-002</text>
+    <line x1="1350" y1="789" x2="1310" y2="804" stroke="#dbe4f5" stroke-width="2"/>
   </g>
 </svg>

@@ -1,4 +1,4 @@
-import type { BattleCardView, BattleSide, BattleTerminalReason, PublicBattleView } from "@ankake/domain";
+import type { BattleCardView, BattleSide, PublicBattleView } from "@ankake/domain";
 import { useRef, useState } from "react";
 import { CardArtwork } from "../CardArtwork";
 import { BattleCardDetailPopover } from "./BattleCardDetailPopover";
@@ -21,7 +21,7 @@ export function BattleResultOverlay(props: {
     <div className="battle-modal-backdrop" data-testid="battle-result-overlay">
       <section className="battle-modal">
         <h2>{result.winner === "player" ? uiText(props.locale, "battle.result.victory") : uiText(props.locale, "battle.result.defeat")}</h2>
-        <p data-testid="battle-result-reason">{uiText(props.locale, "battle.result.reason")}: {reasonLabel(result.reason, props.locale)}</p>
+        <p data-testid="battle-result-reason">{uiText(props.locale, "battle.result.reason")}: {reasonLabel(result, props.locale)}</p>
         <p data-testid="battle-result-turn">{uiText(props.locale, "battle.result.turn")}: {result.turnNumber}</p>
         <div className="battle-modal__actions">
           <button className="battle-button battle-button--primary" data-testid="battle-rematch-button" disabled={props.interactionDisabled} type="button" onClick={props.onRematch}>
@@ -36,8 +36,11 @@ export function BattleResultOverlay(props: {
   );
 }
 
-function reasonLabel(reason: BattleTerminalReason, locale: UiLocale | undefined): string {
-  return uiText(locale, `battle.result.${reason}`);
+function reasonLabel(result: NonNullable<PublicBattleView["terminalResult"]>, locale: UiLocale | undefined): string {
+  if (result.reason === "quit" && result.loser === "player") {
+    return uiText(locale, "battle.result.quit-self");
+  }
+  return uiText(locale, `battle.result.${result.reason}`);
 }
 
 export function BattleGraveyardDialog(props: {

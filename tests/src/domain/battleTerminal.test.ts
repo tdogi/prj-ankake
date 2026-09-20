@@ -2,6 +2,7 @@ import {
   applyTerminalResult,
   createInitialBattleBoard,
   evaluateBattleTerminal,
+  GameEngine,
   getBattleBaseById,
   placeCreatureForTest,
   resolveAttackPhase,
@@ -47,6 +48,25 @@ describe("battle terminal rules", () => {
     const result = evaluateBattleTerminal(state, trigger, 90);
 
     expect(result).toMatchObject({ winner: "cpu", loser: "player", reason });
+  });
+
+  it("ends the battle with the resigning side as the loser", () => {
+    const state = sampleState();
+
+    const result = GameEngine.submitCommand(state, { type: "resign", side: "player" });
+
+    expect(result).toMatchObject({
+      ok: true,
+      state: {
+        phase: "terminal",
+        terminalResult: {
+          winner: "cpu",
+          loser: "player",
+          reason: "quit"
+        }
+      },
+      events: [expect.objectContaining({ type: "battle.ended", side: "cpu" })]
+    });
   });
 
   it("stops remaining attackers after a player-base terminal", () => {

@@ -6,3 +6,18 @@ node_modules/
 
 # Codex files
 .codex/
+
+.env
+.env.local
+supabase/.branches/
+supabase/.temp/
+
+# Terraform state and variable files can contain database credentials and API keys.
+infra/terraform/.terraform/
+infra/terraform/*.tfstate
+infra/terraform/*.tfstate.*
+infra/terraform/*.tfvars
+!infra/terraform/terraform.tfvars.example
+infra/terraform/*.tfplan
+infra/terraform/crash.log
+infra/terraform/crash.*.log

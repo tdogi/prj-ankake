@@ -20,3 +20,77 @@ textarea,
 select {
   font: inherit;
 }
+
+.online-battle-prep-screen .battle-prep-header {
+  justify-content: flex-start;
+}
+
+.online-battle-prep-screen .battle-prep-header > div:nth-child(2) {
+  margin-right: auto;
+}
+
+.online-language-switcher {
+  display: flex;
+  overflow: hidden;
+  border: 1px solid rgba(246, 239, 231, 0.18);
+  border-radius: 8px;
+}
+
+.online-language-switcher button {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 0;
+  color: #f7fafb;
+  background: transparent;
+  cursor: pointer;
+}
+
+.online-language-switcher button[aria-pressed="true"] {
+  color: #171313;
+  background: #f1c46f;
+}
+
+.battle-deck-selector input {
+  min-height: 42px;
+  padding: 0 10px;
+  border: 1px solid rgba(246, 239, 231, 0.18);
+  border-radius: 8px;
+  color: #fff8ef;
+  background: #171313;
+}
+
+.battle-deck-selector small {
+  color: #d4dde1;
+  line-height: 1.35;
+}
+
+.online-matching-overlay {
+  position: fixed;
+  z-index: 10;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(8, 12, 14, 0.76);
+}
+
+.online-matching-overlay > div {
+  width: min(620px, 100%);
+  max-height: min(680px, calc(100vh - 40px));
+  overflow: auto;
+  padding: 18px;
+  border: 1px solid rgba(246, 239, 231, 0.28);
+  border-radius: 10px;
+  background: #1b2226;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.45);
+}
+
+@media (max-width: 560px) {
+  .online-battle-prep-screen .battle-prep-header {
+    gap: 10px;
+  }
+
+  .online-language-switcher button {
+    padding: 0 7px;
+  }
+}

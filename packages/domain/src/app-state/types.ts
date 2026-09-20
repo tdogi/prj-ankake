@@ -3,8 +3,8 @@ import type {
   StaticCatalogValidationIssue
 } from "../catalog/types";
 
-export type RouteId = "menu" | "deck-building" | "battle-preparation" | "battle";
-export type MenuActionId = "cpu-battle" | "deck-building";
+export type RouteId = "menu" | "deck-building" | "battle-preparation" | "online-battle-preparation" | "battle";
+export type MenuActionId = "online-battle" | "cpu-battle" | "deck-building";
 
 export interface DestinationCapability {
   readonly actionId: MenuActionId;
@@ -14,7 +14,7 @@ export interface DestinationCapability {
   readonly disabledReason?: string;
 }
 
-export type DestinationCapabilityMap = Readonly<Record<MenuActionId, DestinationCapability>>;
+export type DestinationCapabilityMap = Readonly<Partial<Record<MenuActionId, DestinationCapability>>>;
 
 export interface DeckSummary {
   readonly id: string;

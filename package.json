@@ -10,7 +10,8 @@
   ],
   "scripts": {
     "dev": "npm run dev -w @ankake/web",
-    "build": "npm run build -w @ankake/web",
+    "build": "npm run build:edge-function && npm run build -w @ankake/web",
+    "build:edge-function": "esbuild packages/domain/src/battle/index.ts --bundle --format=esm --platform=neutral --target=es2022 --outfile=supabase/functions/_shared/domain-battle.js",
     "preview": "npm run preview -w @ankake/web",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run typecheck",
@@ -25,6 +26,7 @@
     "@vitejs/plugin-react": "^4.3.1",
     "fast-check": "^3.23.2",
     "jsdom": "^24.1.1",
+    "supabase": "^2.117.0",
     "typescript": "^5.5.4",
     "vite": "^5.4.0",
     "vitest": "^2.0.5"

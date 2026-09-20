@@ -1,0 +1,11 @@
+# Find this in Supabase Dashboard: Organization Settings > General > Organization slug.
+organization_id = "your-organization-slug"
+
+# Use a unique password of at least 16 characters. This file is a template;
+# copy it to terraform.tfvars, which is ignored by Git.
+database_password = "replace-with-a-unique-16-character-minimum-password"
+
+# These defaults target the existing GitHub Pages site. Change both values for
+# a fork or another Pages site.
+# site_url = "https://your-account.github.io/your-repository/"
+# redirect_urls = ["https://your-account.github.io/your-repository/"]

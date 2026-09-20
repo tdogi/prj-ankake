@@ -273,5 +273,6 @@ function commandTieBreakKey(command: BattleCommand): string {
     case "castSpell": return `${command.type}:${command.handInstanceId}:${command.targetInstanceId ?? command.targetBaseId ?? ""}`;
     case "moveCreature": return `${command.type}:${command.creatureInstanceId}:${command.path.map((step) => `${step.column}:${step.row}`).join("/")}`;
     case "endPlayPhase": return command.type;
+    case "resign": return command.type;
   }
 }

@@ -379,6 +379,10 @@ export type BattleCommand =
       readonly type: "endPlayPhase";
       readonly side: BattleSide;
       readonly reason: "manual" | "timer" | "cpu";
+    }
+  | {
+      readonly type: "resign";
+      readonly side: BattleSide;
     };
 
 export type BattleCommandResult =

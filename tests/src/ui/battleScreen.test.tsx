@@ -71,6 +71,16 @@ const LOG_ENTRIES: readonly BattleLogEntry[] = [
 ];
 
 describe("battle screen", () => {
+  it("labels the resignation control and invokes its handler", () => {
+    const onQuitBattle = vi.fn();
+    renderBattleScreen(projectPublicBattleView(createBattleScreenState()), { onQuitBattle });
+
+    const button = screen.getByTestId("battle-quit-button");
+    expect(button).toHaveTextContent("リタイア");
+    fireEvent.click(button);
+    expect(onQuitBattle).toHaveBeenCalledTimes(1);
+  });
+
   it("shows a specific Japanese reason for an unplayable hand card", () => {
     const viewModel = projectPublicBattleView(createBattleScreenState());
     const unavailableCard = {
@@ -683,6 +693,39 @@ describe("battle screen", () => {
     expect(screen.getByTestId("battle-rematch-button")).toHaveTextContent("Rematch");
   });
 
+  it("explains resignation from the viewing player's perspective", () => {
+    const state = createBattleScreenState();
+    const selfRetired = projectPublicBattleView({
+      ...state,
+      phase: "terminal",
+      terminalResult: {
+        winner: "cpu",
+        loser: "player",
+        reason: "quit",
+        turnNumber: 4,
+        elapsedSeconds: 20,
+        finalEventSequence: 12
+      }
+    });
+    const opponentRetired = projectPublicBattleView({
+      ...state,
+      phase: "terminal",
+      terminalResult: {
+        winner: "player",
+        loser: "cpu",
+        reason: "quit",
+        turnNumber: 4,
+        elapsedSeconds: 20,
+        finalEventSequence: 12
+      }
+    });
+    const { rerender } = renderBattleScreen(selfRetired, { locale: "ja" });
+    expect(screen.getByTestId("battle-result-reason")).toHaveTextContent("理由: あなたがリタイア");
+
+    rerender(<BattleScreen viewModel={opponentRetired} locale="ja" logEntries={LOG_ENTRIES} cpuStatus="completed" onReturnToPreparation={vi.fn()} onReturnToMenu={vi.fn()} onEndPlayPhase={vi.fn()} onRematch={vi.fn()} onQuitBattle={vi.fn()} />);
+    expect(screen.getByTestId("battle-result-reason")).toHaveTextContent("理由: 相手がリタイア");
+  });
+
   it("keeps directional focus results inside the projected topology", () => {
     const squares = projectPublicBattleView(createBattleScreenState()).boardSquares;
     const directions: readonly BoardFocusDirection[] = [
@@ -985,6 +1028,94 @@ describe("battle screen", () => {
     removeListener.mockRestore();
   });
 
+  it("ends the player's battle as a resignation", async () => {
+    const state = createBattleScreenState();
+    battleSetupMocks.loadBattlePreparation.mockResolvedValue({
+      deckOptions: [{ deckId: "deck-resign", name: "Resign Deck", cardCount: 40, battleReady: true, updatedAt: "2026-08-01T00:00:00.000Z" }],
+      playerDeckId: "deck-resign",
+      cpuDeckId: "deck-resign",
+      firstPlayerMode: "player-first",
+      loading: false
+    });
+    battleSetupMocks.startBattle.mockResolvedValue({ ok: true, state, events: [] });
+    const { result } = renderHook(() => useBattleController({
+      catalog: validCatalogSnapshotFixture,
+      repository: {} as DeckRepository,
+      onReturnToMenu: vi.fn()
+    }));
+
+    await waitFor(() => expect(result.current.viewModel.kind).toBe("preparation"));
+    await act(async () => {
+      await result.current.actions.startBattle();
+    });
+    await waitFor(() => expect(result.current.viewModel.kind).toBe("battle"));
+    await act(async () => {
+      await result.current.actions.resignBattle();
+    });
+
+    expect(result.current.viewModel).toMatchObject({
+      kind: "battle",
+      publicView: {
+        phase: "terminal",
+        terminalResult: {
+          winner: "cpu",
+          loser: "player",
+          reason: "quit"
+        }
+      }
+    });
+  });
+
+  it("submits online resignation through the remote battle transport", async () => {
+    const state = createBattleScreenState();
+    const terminalState: BattleState = {
+      ...state,
+      phase: "terminal",
+      terminalResult: {
+        winner: "cpu",
+        loser: "player",
+        reason: "quit",
+        turnNumber: state.metadata.turnNumber,
+        elapsedSeconds: state.metadata.elapsedSeconds,
+        finalEventSequence: state.eventCursor + 1
+      }
+    };
+    const submitCommand = vi.fn().mockResolvedValue({
+      ok: true,
+      state: terminalState,
+      events: [{
+        sequence: state.eventCursor + 1,
+        type: "battle.ended",
+        side: "cpu",
+        message: "CPU won after the opponent quit."
+      }]
+    });
+    const onReturnToOnlinePreparation = vi.fn();
+    const { result } = renderHook(() => useBattleController({
+      catalog: validCatalogSnapshotFixture,
+      repository: {} as DeckRepository,
+      onReturnToMenu: vi.fn(),
+      onlineBattle: {
+        initialState: state,
+        initialEvents: [],
+        submitCommand
+      },
+      onReturnToOnlinePreparation
+    }));
+
+    await act(async () => {
+      await result.current.actions.resignBattle();
+    });
+
+    expect(submitCommand).toHaveBeenCalledWith({ type: "resign", side: "player" });
+    expect(result.current.viewModel).toMatchObject({
+      kind: "battle",
+      publicView: { terminalResult: { winner: "cpu", loser: "player", reason: "quit" } }
+    });
+    act(() => result.current.actions.quitBattle());
+    expect(onReturnToOnlinePreparation).toHaveBeenCalledTimes(1);
+  });
+
   it("resolves a no-target summon when its destination is clicked", async () => {
     const initialState = createBattleScreenState();
     const creature = Object.values(initialState.cardInstances).find(
@@ -1236,6 +1367,7 @@ function renderBattleScreen(
   overrides: {
     readonly cpuStatus?: "idle" | "thinking" | "executing" | "completed" | "limit-reached";
     readonly onEndPlayPhase?: () => void;
+    readonly onQuitBattle?: () => void;
     readonly locale?: "ja" | "en";
     readonly activeAttackerInstanceId?: string;
   } = {}
@@ -1251,7 +1383,7 @@ function renderBattleScreen(
       onReturnToMenu={vi.fn()}
       onEndPlayPhase={overrides.onEndPlayPhase ?? vi.fn()}
       onRematch={vi.fn()}
-      onQuitBattle={vi.fn()}
+      onQuitBattle={overrides.onQuitBattle ?? vi.fn()}
     />
   );
 }

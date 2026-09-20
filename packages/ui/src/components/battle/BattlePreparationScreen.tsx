@@ -41,14 +41,14 @@ export function BattlePreparationScreen(props: BattlePreparationScreenProps) {
       </header>
 
       <section className="battle-prep-grid">
-        <DeckSelector
+        <BattleDeckSelector
           label={uiText(props.locale, "battle.player-deck")}
           testId="battle-prep-player-deck-selector"
           deckId={viewModel.playerDeckId}
           decks={viewModel.deckOptions}
           onChange={props.onSelectPlayerDeck} locale={props.locale}
         />
-        <DeckSelector
+        <BattleDeckSelector
           label={uiText(props.locale, "battle.cpu-deck")}
           testId="battle-prep-cpu-deck-selector"
           deckId={viewModel.cpuDeckId}
@@ -114,21 +114,24 @@ export function BattlePreparationScreen(props: BattlePreparationScreenProps) {
   );
 }
 
-interface DeckSelectorProps {
+export interface BattleDeckSelectorProps {
   readonly label: string;
   readonly testId: string;
   readonly deckId?: string;
   readonly decks: readonly SavedDeckSummary[];
   readonly onChange: (deckId: string) => void;
   readonly locale?: "ja" | "en";
+  readonly disabled?: boolean;
 }
 
-function DeckSelector(props: DeckSelectorProps) {
+/** Shared native deck selector used by CPU and online battle preparation. */
+export function BattleDeckSelector(props: BattleDeckSelectorProps) {
   return (
     <label className="battle-panel battle-deck-selector">
       <span>{props.label}</span>
       <select
         data-testid={props.testId}
+        disabled={props.disabled}
         value={props.deckId ?? ""}
         onChange={(event) => props.onChange(event.currentTarget.value)}
       >

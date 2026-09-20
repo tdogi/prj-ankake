@@ -9,6 +9,7 @@ const base = process.env.GITHUB_ACTIONS === "true" && repositoryName
 
 export default defineConfig({
   base,
+  envDir: fileURLToPath(new URL("../../", import.meta.url)),
   plugins: [react()],
   resolve: {
     alias: [

@@ -16,6 +16,10 @@ export function validateBattleCommand(
   state: BattleState,
   command: BattleCommand
 ): readonly BattleValidationIssue[] {
+  if (command.type === "resign") {
+    return validateResignation(state);
+  }
+
   const commonIssues = validateCommon(state, command);
   if (commonIssues.length > 0) {
     return commonIssues;
@@ -31,6 +35,19 @@ export function validateBattleCommand(
     case "endPlayPhase":
       return [];
   }
+}
+
+function validateResignation(state: BattleState): readonly BattleValidationIssue[] {
+  if (state.phase === "terminal" || state.terminalResult) {
+    return [
+      {
+        code: "battle.terminal",
+        message: "The battle has already ended."
+      }
+    ];
+  }
+
+  return [];
 }
 
 export function getFirstValidationMessage(issues: readonly BattleValidationIssue[]): string {
