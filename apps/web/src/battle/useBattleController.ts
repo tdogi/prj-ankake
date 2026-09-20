@@ -107,6 +107,7 @@ export interface BattleControllerInput {
 export interface OnlineBattleTransport {
   readonly initialState: BattleState;
   readonly initialEvents: readonly BattleEvent[];
+  readonly revision?: number;
   submitCommand(command: BattleCommand): Promise<
     | { readonly ok: true; readonly state: BattleState; readonly events: readonly BattleEvent[] }
     | { readonly ok: false; readonly issues: readonly BattleValidationIssue[] }
@@ -173,7 +174,7 @@ export function useBattleController(input: BattleControllerInput): BattleControl
     if (!input.onlineBattle) return;
     setSession(createBattleRuntimeSession(input.onlineBattle.initialState, input.onlineBattle.initialEvents));
     setInteraction(IDLE_BATTLE_INTERACTION);
-  }, [input.onlineBattle?.initialState, input.onlineBattle?.initialEvents]);
+  }, [input.onlineBattle?.revision]);
 
   useEffect(() => {
     if (!isBattleInteractionPending(interaction)) {

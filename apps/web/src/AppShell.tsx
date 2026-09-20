@@ -140,6 +140,7 @@ function BattleRoute({ catalog, locale, onReturnToMenu, autoStart, initialPlayer
       onlineBattle: {
         initialState: onlineBattle.state,
         initialEvents: onlineBattle.events,
+        revision: onlineBattle.revision,
         submitCommand: (command) => submitOnlineHumanBattleCommand(onlineBattle, command)
       },
       onReturnToOnlinePreparation

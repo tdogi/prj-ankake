@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "vitest run --config vitest.config.ts",
+    "test": "npm run test:core && npm run test:ui",
+    "test:core": "vitest run --config vitest.config.ts src/domain src/app src/cpu src/persistence",
+    "test:ui": "vitest run --config vitest.config.ts src/ui",
     "test:watch": "vitest --config vitest.config.ts",
     "typecheck": "tsc -p tsconfig.json"
   },

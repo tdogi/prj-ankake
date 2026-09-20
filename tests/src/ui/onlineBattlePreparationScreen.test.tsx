@@ -85,7 +85,7 @@ describe("online battle preparation screen", () => {
 
   it("starts a human match through the online battle API", async () => {
     const onMatched = vi.fn();
-    humanMatchMocks.start.mockResolvedValue({ battleId: "battle-id", side: "player", opponentName: "Player Two", state: {}, events: [], client: {} });
+    humanMatchMocks.start.mockResolvedValue({ battleId: "battle-id", revision: 0, side: "player", opponentName: "Player Two", state: {}, events: [], client: {} });
     try {
       render(<OnlineBattlePreparationScreen repository={repository} displayNameRepository={new MemoryDisplayNameRepository()} catalog={validCatalogSnapshotFixture} locale="en" onLocaleChange={vi.fn()} onReturn={vi.fn()} onMatched={onMatched} />);
       await screen.findByTestId("online-battle-deck-selector");

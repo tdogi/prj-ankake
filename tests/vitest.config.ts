@@ -32,14 +32,6 @@ export default defineConfig({
     environment: "jsdom",
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
     globals: true,
-    restoreMocks: true,
-    pool: "forks",
-    poolOptions: {
-      forks: {
-        minForks: 1,
-        maxForks: 2,
-        isolate: true
-      }
-    }
+    restoreMocks: true
   }
 });

@@ -1,7 +1,7 @@
 import { createClient, type RealtimeChannel, type SupabaseClient } from "@supabase/supabase-js";
 import type { BattleCommand, BattleEvent, BattleState, BattleValidationIssue, SavedDeck, StaticCatalogSnapshot } from "@ankake/domain";
 
-export interface OnlineHumanBattleConnection { readonly battleId: string; readonly opponentName: string; readonly side: "player" | "cpu"; readonly state: BattleState; readonly events: readonly BattleEvent[]; readonly client: SupabaseClient; }
+export interface OnlineHumanBattleConnection { readonly battleId: string; readonly revision: number; readonly opponentName: string; readonly side: "player" | "cpu"; readonly state: BattleState; readonly events: readonly BattleEvent[]; readonly client: SupabaseClient; }
 type MatchResponse = { readonly status: "waiting" | "matched"; readonly userId?: string; readonly connection?: Omit<OnlineHumanBattleConnection, "client"> };
 let pendingClient: SupabaseClient | undefined;
 
@@ -67,4 +67,4 @@ async function request<T>(client: SupabaseClient, body: Record<string, unknown>)
   return payload as T;
 }
 
-function isConnection(value: unknown): value is Omit<OnlineHumanBattleConnection, "client"> { return typeof value === "object" && value !== null && typeof (value as any).battleId === "string" && ((value as any).side === "player" || (value as any).side === "cpu") && typeof (value as any).opponentName === "string" && typeof (value as any).state === "object" && Array.isArray((value as any).events); }
+function isConnection(value: unknown): value is Omit<OnlineHumanBattleConnection, "client"> { return typeof value === "object" && value !== null && typeof (value as any).battleId === "string" && typeof (value as any).revision === "number" && ((value as any).side === "player" || (value as any).side === "cpu") && typeof (value as any).opponentName === "string" && typeof (value as any).state === "object" && Array.isArray((value as any).events); }

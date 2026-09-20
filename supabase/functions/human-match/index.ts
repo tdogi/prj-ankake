@@ -121,7 +121,7 @@ async function findBattle(admin: any, userId: string): Promise<any | undefined> 
 }
 
 function sideFor(battle: any, userId: string): "player" | "cpu" { return battle.player_user_id === userId ? "player" : "cpu"; }
-function connectionPayload(battle: any, side: "player" | "cpu", events: readonly any[]) { return { battleId: battle.id, side, opponentName: side === "player" ? battle.cpu_name : battle.player_name, state: viewerState(battle.game_state.state, side), events: viewerEvents(events, side) }; }
+function connectionPayload(battle: any, side: "player" | "cpu", events: readonly any[]) { return { battleId: battle.id, revision: battle.revision, side, opponentName: side === "player" ? battle.cpu_name : battle.player_name, state: viewerState(battle.game_state.state, side), events: viewerEvents(events, side) }; }
 async function publishBattle(admin: any, battle: any, events: readonly any[]) { await Promise.all([publish(admin, `battle:${battle.id}:player`, "state", connectionPayload(battle, "player", events)), publish(admin, `battle:${battle.id}:cpu`, "state", connectionPayload(battle, "cpu", events))]); }
 async function publish(admin: any, topic: string, event: string, payload: unknown) { const response = await fetch(`${url}/realtime/v1/api/broadcast`, { method: "POST", headers: { authorization: `Bearer ${serviceKey}`, apikey: serviceKey, "content-type": "application/json" }, body: JSON.stringify({ messages: [{ topic, event, payload, private: true }] }) }); if (!response.ok) throw new Error("Realtime broadcast failed"); }
 
