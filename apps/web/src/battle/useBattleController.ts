@@ -84,6 +84,7 @@ export interface BattleControllerActions {
   readonly endPlayPhase: () => Promise<void>;
   readonly rematch: () => Promise<void>;
   readonly quitBattle: () => void;
+  readonly resignBattle: () => Promise<void>;
 }
 
 export interface BattleController {
@@ -132,6 +133,7 @@ export function useBattleController(input: BattleControllerInput): BattleControl
   const [animationEvent, setAnimationEvent] = useState<BattleEvent | undefined>();
   const [activeAttackerInstanceId, setActiveAttackerInstanceId] = useState<string | undefined>();
   const activeAttackerInstanceIdRef = useRef<string | undefined>();
+  const cpuExecutionGenerationRef = useRef(0);
   const [defeatedCreature, setDefeatedCreature] = useState<DefeatedCreaturePresentation | undefined>();
   const [destroyedCreatureInstanceIds, setDestroyedCreatureInstanceIds] = useState<readonly string[]>([]);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -209,6 +211,7 @@ export function useBattleController(input: BattleControllerInput): BattleControl
     }
 
     diagnostics.seed(result.state.metadata.setup.seed);
+    cpuExecutionGenerationRef.current += 1;
     const nextSession = createBattleRuntimeSession(result.state, result.events);
     setInteraction(IDLE_BATTLE_INTERACTION);
     activeAttackerInstanceIdRef.current = undefined;
@@ -265,7 +268,11 @@ export function useBattleController(input: BattleControllerInput): BattleControl
 
     setInteraction(IDLE_BATTLE_INTERACTION);
     setCpuStatus("thinking");
+    const executionGeneration = ++cpuExecutionGenerationRef.current;
     await yieldToBrowser();
+    if (executionGeneration !== cpuExecutionGenerationRef.current) {
+      return;
+    }
     setCpuStatus("executing");
     const result = await executeCpuTurn(nextSession, diagnostics, yieldToBrowser, 30, async (presentedSession, previousSession) => {
       await playBattleEvents(presentedSession.lastEvents, previousSession, presentedSession);
@@ -293,6 +300,29 @@ export function useBattleController(input: BattleControllerInput): BattleControl
     setInteraction(IDLE_BATTLE_INTERACTION);
     setLastValidationIssueCode(undefined);
     setSession(undefined);
+  }
+
+  async function resignBattle(): Promise<void> {
+    if (!session || isAnimating) return;
+
+    // A resignation remains valid while the CPU is preparing its turn.  Stop
+    // that deferred execution before resolving the terminal result.
+    cpuExecutionGenerationRef.current += 1;
+    setInteraction(IDLE_BATTLE_INTERACTION);
+    setLastValidationIssueCode(undefined);
+    const attempted = attemptRuntimeCommand(
+      session,
+      { type: "resign", side: "player" },
+      diagnostics
+    );
+    if (!attempted.ok) {
+      setLastValidationIssueCode(attempted.issues[0]?.code);
+      return;
+    }
+
+    await playBattleEvents(attempted.session.lastEvents, session, attempted.session);
+    setSession(attempted.session);
+    setCpuStatus("completed");
   }
 
   function selectHandCard(instanceId: string): void {
@@ -573,7 +603,8 @@ export function useBattleController(input: BattleControllerInput): BattleControl
       cancelInteraction,
       endPlayPhase,
       rematch,
-      quitBattle
+      quitBattle,
+      resignBattle
     }
   };
 }

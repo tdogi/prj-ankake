@@ -4,6 +4,7 @@ import { BATTLE_LANES, getCreaturePlayCost, increaseResonance, isResonanceActive
 import { validateBattleCommand } from "./validation";
 import { getExecutablePlayEffects, hasTargetedSummonEffect } from "./effectPrograms";
 import { resolveEffect } from "./effectResolver";
+import { applyTerminalResult, evaluateBattleTerminal } from "./terminal";
 import type { ExecutableEffectDefinition } from "./effectTypes";
 import { toEffectSelection } from "./effectTypes";
 import { resolveLifecycleEffects } from "./lifecycleEffects";
@@ -37,9 +38,34 @@ export const GameEngine = {
         return acceptMove(state, command);
       case "endPlayPhase":
         return acceptEndPlayPhase(state, command.side);
+      case "resign":
+        return acceptResignation(state, command.side);
     }
   }
 };
+
+function acceptResignation(state: BattleState, side: BattleSide): BattleCommandResult {
+  const sequence = state.eventCursor + 1;
+  const terminalResult = evaluateBattleTerminal(
+    state,
+    { kind: "quit", losingSide: side },
+    sequence
+  );
+  if (!terminalResult) {
+    return {
+      ok: false,
+      state,
+      issues: [{ code: "battle.terminal", message: "The battle has already ended." }]
+    };
+  }
+
+  const resolution = applyTerminalResult(state, terminalResult, sequence);
+  return {
+    ok: true,
+    state: resolution.state,
+    events: resolution.events
+  };
+}
 
 function acceptSummon(
   state: BattleState,

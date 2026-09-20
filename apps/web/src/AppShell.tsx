@@ -169,7 +169,9 @@ function BattleRoute({ catalog, locale, onReturnToMenu, autoStart, initialPlayer
       onRematch={() => {
         void controller.actions.rematch();
       }}
-      onQuitBattle={controller.actions.quitBattle}
+      onQuitBattle={() => {
+        void controller.actions.resignBattle();
+      }}
     />
   );
 }

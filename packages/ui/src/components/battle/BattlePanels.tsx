@@ -41,7 +41,7 @@ export function BattleStatusPanel(props: BattleStatusPanelProps) {
         type="button"
         onClick={props.onQuitBattle}
       >
-        {props.locale === "ja" ? "対戦をやめる" : "Quit"}
+        {uiText(props.locale, "battle.quit")}
       </button>
       <button
         className="battle-button battle-button--quiet"
