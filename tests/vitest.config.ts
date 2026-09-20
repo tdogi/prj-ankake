@@ -35,7 +35,11 @@ export default defineConfig({
     restoreMocks: true,
     pool: "forks",
     poolOptions: {
-      forks: { singleFork: true }
+      forks: {
+        minForks: 1,
+        maxForks: 2,
+        isolate: true
+      }
     }
   }
 });
