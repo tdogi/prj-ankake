@@ -5,8 +5,10 @@ export type UiLocale = "ja" | "en";
 
 const JAPANESE = {
   "menu.subtitle": "オリジナルデジタルカードゲーム・プロトタイプ",
+  "menu.online-battle": "オンライン対戦",
   "menu.cpu-battle": "CPU対戦",
   "menu.deck-building": "デッキ構築",
+  "menu.online-battle.description": "オンライン対戦の相手を探します。",
   "menu.cpu-battle.description": "対戦ルールの実装後にローカル CPU 対戦をプレイできます。",
   "menu.deck-building.description": "デッキ保存機能の実装後にローカルデッキを調整できます。",
   "menu.available-later": "今後の作業単位で利用可能になります。",
@@ -154,6 +156,34 @@ const JAPANESE = {
   , "battle.preparation.both-ready": "選択した両方のデッキを対戦可能な状態にしてください。"
   , "battle.preparation.select-first": "先に対戦デッキを選択してください。"
   , "battle.preparation.start-failed": "対戦を開始できませんでした。"
+  , "online.kicker": "オンライン対戦"
+  , "online.title": "対戦準備・マッチング"
+  , "online.display-name": "表示名"
+  , "online.display-name.help": "表示名は対戦相手に表示されます。重複していても対戦できます。"
+  , "online.passphrase": "合言葉（任意）"
+  , "online.random-match": "ランダムマッチ：合言葉を設定していない相手と対戦します。"
+  , "online.passphrase-match": "合言葉マッチ：同じ合言葉を入力した相手とのみ対戦します。"
+  , "online.deck": "使用デッキ"
+  , "online.deck.change": "変更"
+  , "online.deck.select": "使用デッキを選択"
+  , "online.deck.none": "使用する対戦可能なデッキを選択してください。"
+  , "online.deck.ready": "対戦可能"
+  , "online.deck.not-ready": "対戦できません"
+  , "online.deck.cards": "枚"
+  , "online.deck.not-ready.card-count": "カード枚数が40枚ではありません。"
+  , "online.deck.loading": "保存済みデッキを読み込んでいます…"
+  , "online.deck.load-failed": "保存済みデッキを読み込めませんでした。"
+  , "online.deck.no-saved": "保存済みデッキはありません。"
+  , "online.status": "状態"
+  , "online.status.ready": "対戦を開始できます。"
+  , "online.status.name-required": "表示名を入力してください。"
+  , "online.status.deck-required": "対戦可能な使用デッキを選択してください。"
+  , "online.status.matching": "対戦相手を探しています。"
+  , "online.connection": "通信状態"
+  , "online.connection.ready": "マッチング要求を送信できます。"
+  , "online.match.start": "マッチングを開始"
+  , "online.match.failed": "マッチングを開始できませんでした。もう一度お試しください。"
+  , "online.connection.config-error": "マッチングサービスの接続設定を確認してください。"
   , "battle.cpu-status.idle": "待機中"
   , "battle.cpu-status.thinking": "思考中"
   , "battle.cpu-status.executing": "実行中"
@@ -203,8 +233,10 @@ type TranslationCatalog = Readonly<Record<UiTextKey, string>>;
 
 const ENGLISH: TranslationCatalog = {
   "menu.subtitle": "Original digital card game prototype",
+  "menu.online-battle": "Online Battle",
   "menu.cpu-battle": "CPU Battle",
   "menu.deck-building": "Deck Building",
+  "menu.online-battle.description": "Find an opponent for an online battle.",
   "menu.cpu-battle.description": "Play a local CPU match after battle rules arrive.",
   "menu.deck-building.description": "Prepare and tune local decks after deck storage arrives.",
   "menu.available-later": "Available in a later unit of work.",
@@ -352,6 +384,34 @@ const ENGLISH: TranslationCatalog = {
   , "battle.preparation.both-ready": "Both selected decks must be battle-ready."
   , "battle.preparation.select-first": "Select battle decks first."
   , "battle.preparation.start-failed": "Battle could not start."
+  , "online.kicker": "Online Battle"
+  , "online.title": "Battle Setup & Matching"
+  , "online.display-name": "Display name"
+  , "online.display-name.help": "Your display name is shown to your opponent. Duplicate names are allowed."
+  , "online.passphrase": "Passphrase (optional)"
+  , "online.random-match": "Random match: find an opponent who has not set a passphrase."
+  , "online.passphrase-match": "Passphrase match: find only an opponent with the same passphrase."
+  , "online.deck": "Battle deck"
+  , "online.deck.change": "Change"
+  , "online.deck.select": "Select battle deck"
+  , "online.deck.none": "Select a battle-ready deck to use."
+  , "online.deck.ready": "Battle-ready"
+  , "online.deck.not-ready": "Cannot be used"
+  , "online.deck.cards": "cards"
+  , "online.deck.not-ready.card-count": "This deck does not contain exactly 40 cards."
+  , "online.deck.loading": "Loading saved decks…"
+  , "online.deck.load-failed": "Saved decks could not be loaded."
+  , "online.deck.no-saved": "No saved decks are available."
+  , "online.status": "Status"
+  , "online.status.ready": "Ready to start matching."
+  , "online.status.name-required": "Enter a display name."
+  , "online.status.deck-required": "Select a battle-ready deck."
+  , "online.status.matching": "Looking for an opponent."
+  , "online.connection": "Connection"
+  , "online.connection.ready": "Ready to send a match request."
+  , "online.match.start": "Start matching"
+  , "online.match.failed": "Matching could not be started. Please try again."
+  , "online.connection.config-error": "Check the matching service connection settings."
   , "battle.cpu-status.idle": "Idle"
   , "battle.cpu-status.thinking": "Thinking"
   , "battle.cpu-status.executing": "Executing"
@@ -607,8 +667,8 @@ function uiTextOrFallback(locale: UiLocale | undefined, key: string, fallback: s
 export function localizeMenuText(locale: UiLocale | undefined, text: string, kind: "title" | "subtitle" | "action" | "description" | "version" | "reason"): string {
   if (kind === "title" && text === "Project Ankake") return text;
   if (kind === "subtitle") return uiText(locale, "menu.subtitle");
-  if (kind === "action") return text === "CPU Battle" ? uiText(locale, "menu.cpu-battle") : text === "Deck Building" ? uiText(locale, "menu.deck-building") : text;
-  if (kind === "description") return text.startsWith("Play a local CPU") ? uiText(locale, "menu.cpu-battle.description") : text.startsWith("Prepare and tune") ? uiText(locale, "menu.deck-building.description") : text;
+  if (kind === "action") return text === "Online Battle" ? uiText(locale, "menu.online-battle") : text === "CPU Battle" ? uiText(locale, "menu.cpu-battle") : text === "Deck Building" ? uiText(locale, "menu.deck-building") : text;
+  if (kind === "description") return text.startsWith("Match locally") ? uiText(locale, "menu.online-battle.description") : text.startsWith("Play a local CPU") ? uiText(locale, "menu.cpu-battle.description") : text.startsWith("Prepare and tune") ? uiText(locale, "menu.deck-building.description") : text;
   if (kind === "version") {
     const version = /^Catalog (.+)$/.exec(text)?.[1];
     return version ? (locale === "en" ? `Catalog ${version}` : `カタログ ${version}`) : uiText(locale, "menu.catalog-loading");

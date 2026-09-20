@@ -8,7 +8,9 @@ export type PersistenceOperation =
   | "deck.list"
   | "deck.load"
   | "deck.save"
-  | "deck.delete";
+  | "deck.delete"
+  | "online-display-name.load"
+  | "online-display-name.save";
 
 export type PersistenceErrorCode =
   | "storage.unavailable"

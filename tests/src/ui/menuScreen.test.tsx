@@ -13,6 +13,15 @@ const baseViewModel: MenuViewModel = {
   versionText: "Catalog 1.1.0",
   actions: [
     {
+      id: "online-battle",
+      label: "Online Battle",
+      description: "Match locally against CPU.",
+      routeLabel: "Online battle",
+      enabled: true,
+      dataTestId: "menu-action-online-battle",
+      tone: "primary"
+    },
+    {
       id: "cpu-battle",
       label: "CPU Battle",
       description: "Play a local CPU match after battle rules arrive.",
@@ -72,11 +81,14 @@ describe("menu UI", () => {
     expect(screen.getByRole("heading", { name: "Project Ankake" })).toBeInTheDocument();
     expect(screen.getByText("オリジナルデジタルカードゲーム・プロトタイプ")).toBeInTheDocument();
     expect(screen.getByTestId("menu-action-cpu-battle")).toHaveTextContent("CPU対戦");
+    expect(screen.getByTestId("menu-action-online-battle")).toHaveTextContent("オンライン対戦");
+    expect(screen.getByTestId("menu-action-online-battle")).toHaveTextContent("オンライン対戦の相手を探します。");
     expect(screen.getByTestId("menu-action-cpu-battle")).toHaveTextContent("対戦ルールの実装後にローカル CPU 対戦をプレイできます。");
     expect(screen.getByTestId("menu-action-cpu-battle")).toHaveTextContent("今後の作業単位で利用可能になります。");
     expect(screen.getByTestId("menu-version-text")).toHaveTextContent("カタログ 1.1.0");
 
     rerender(<MenuScreen viewModel={baseViewModel} locale="en" onActionSelected={vi.fn()} />);
+    expect(screen.getByTestId("menu-action-online-battle")).toHaveTextContent("Online Battle");
     expect(screen.getByTestId("menu-action-deck-building")).toHaveTextContent("Deck Building");
     expect(screen.getByTestId("menu-version-text")).toHaveTextContent("Catalog 1.1.0");
   });

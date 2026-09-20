@@ -14,7 +14,7 @@ import {
   DialogOverlayHost,
   MenuScreen
 } from "@ankake/ui";
-import { useEffect, useMemo, useReducer, useState } from "react";
+import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { cardNameMap, localizeBattleLogEntries, localizeBattleView } from "./i18n/cardLocalization";
 import type { AppLocale } from "./i18n/localization";
 import { useBattleController } from "./battle/useBattleController";
@@ -23,12 +23,13 @@ import { useDeckBuildingController } from "./deck/useDeckBuildingController";
 import { createUow001DestinationCapabilities } from "./routes/routes";
 import { runStartup } from "./startup/startupOrchestrator";
 import { OnlineBattlePreparationScreen } from "./online/OnlineBattlePreparationScreen";
+import { IndexedDbOnlineDisplayNameRepository } from "@ankake/persistence";
 
 export function AppShell() {
   const destinationCapabilities = useMemo(() => createUow001DestinationCapabilities(), []);
   const [snapshot, dispatch] = useReducer(appStateReducer, createInitialAppSnapshot());
   const [locale, setLocale] = useState<AppLocale>("ja");
-  const [onlineBattle, setOnlineBattle] = useState(false);
+  const [onlineBattleDeckId, setOnlineBattleDeckId] = useState<string>();
   const viewModel = projectMenuViewModel(snapshot, destinationCapabilities);
 
   useEffect(() => {
@@ -69,6 +70,7 @@ export function AppShell() {
   }
 
   function handleReturnToMenu(): void {
+    setOnlineBattleDeckId(undefined);
     dispatch({
       type: "route-selected",
       routeId: "menu"
@@ -80,10 +82,10 @@ export function AppShell() {
   }
 
   if (snapshot.kind === "ready" && snapshot.currentRoute === "battle-preparation") {
-    return <BattleRoute catalog={snapshot.catalog} locale={locale} onReturnToMenu={handleReturnToMenu} autoStart={onlineBattle} />;
+    return <BattleRoute catalog={snapshot.catalog} locale={locale} onReturnToMenu={handleReturnToMenu} autoStart={Boolean(onlineBattleDeckId)} initialPlayerDeckId={onlineBattleDeckId} />;
   }
   if (snapshot.kind === "ready" && snapshot.currentRoute === "online-battle-preparation") {
-    return <OnlineBattlePreparationScreen onReturn={handleReturnToMenu} onMatched={() => { setOnlineBattle(true); dispatch({ type: "route-selected", routeId: "battle-preparation" }); }} />;
+    return <OnlineBattleRoute catalog={snapshot.catalog} locale={locale} onLocaleChange={setLocale} onReturn={handleReturnToMenu} onMatched={(playerDeckId) => { setOnlineBattleDeckId(playerDeckId); dispatch({ type: "route-selected", routeId: "battle-preparation" }); }} />;
   }
 
   return (
@@ -94,21 +96,34 @@ export function AppShell() {
   );
 }
 
+function OnlineBattleRoute({ catalog, locale, onLocaleChange, onReturn, onMatched }: { readonly catalog: StaticCatalogSnapshot; readonly locale: AppLocale; readonly onLocaleChange: (locale: AppLocale) => void; readonly onReturn: () => void; readonly onMatched: (playerDeckId: string) => void }) {
+  const repository = useMemo(() => createDeckRepository(catalog), [catalog]);
+  const displayNameRepository = useMemo(() => new IndexedDbOnlineDisplayNameRepository(), []);
+  return <OnlineBattlePreparationScreen repository={repository} displayNameRepository={displayNameRepository} locale={locale} onLocaleChange={onLocaleChange} onReturn={onReturn} onMatched={onMatched} />;
+}
+
 interface BattleRouteProps {
   readonly catalog: StaticCatalogSnapshot;
   readonly locale: AppLocale;
   readonly onReturnToMenu: () => void;
   readonly autoStart?: boolean;
+  readonly initialPlayerDeckId?: string;
 }
 
-function BattleRoute({ catalog, locale, onReturnToMenu, autoStart }: BattleRouteProps) {
+function BattleRoute({ catalog, locale, onReturnToMenu, autoStart, initialPlayerDeckId }: BattleRouteProps) {
   const repository = useMemo(() => createDeckRepository(catalog), [catalog]);
+  const hasAutoStarted = useRef(false);
   const controller = useBattleController({
     catalog,
     repository,
-    onReturnToMenu
+    onReturnToMenu,
+    initialPlayerDeckId
   });
-  useEffect(() => { if (autoStart && controller.viewModel.kind === "preparation" && !controller.viewModel.preparation.loading && !controller.viewModel.startDisabledReason) void controller.actions.startBattle(); }, [autoStart, controller]);
+  useEffect(() => {
+    if (hasAutoStarted.current || !autoStart || controller.viewModel.kind !== "preparation" || controller.viewModel.preparation.loading || controller.viewModel.startDisabledReason) return;
+    hasAutoStarted.current = true;
+    void controller.actions.startBattle();
+  }, [autoStart, controller]);
 
   if (controller.viewModel.kind === "preparation") {
     return (

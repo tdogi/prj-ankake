@@ -95,6 +95,7 @@ export interface BattleControllerInput {
   readonly catalog: StaticCatalogSnapshot;
   readonly repository: DeckRepository;
   readonly onReturnToMenu: () => void;
+  readonly initialPlayerDeckId?: string;
 }
 
 type CpuStatus = "idle" | "thinking" | "executing" | "completed" | "limit-reached";
@@ -137,7 +138,7 @@ export function useBattleController(input: BattleControllerInput): BattleControl
 
   useEffect(() => {
     let cancelled = false;
-    loadBattlePreparation(input.repository).then((next) => {
+    loadBattlePreparation(input.repository, input.initialPlayerDeckId).then((next) => {
       if (!cancelled) {
         setPreparation(next);
       }
@@ -145,7 +146,7 @@ export function useBattleController(input: BattleControllerInput): BattleControl
     return () => {
       cancelled = true;
     };
-  }, [input.repository]);
+  }, [input.initialPlayerDeckId, input.repository]);
 
   useEffect(() => {
     if (!isBattleInteractionPending(interaction)) {

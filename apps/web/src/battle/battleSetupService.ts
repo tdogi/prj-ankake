@@ -17,7 +17,8 @@ export interface BattlePreparationState {
 }
 
 export async function loadBattlePreparation(
-  repository: DeckRepository
+  repository: DeckRepository,
+  preferredPlayerDeckId?: string
 ): Promise<BattlePreparationState> {
   const result = await repository.listDecks();
 
@@ -33,7 +34,9 @@ export async function loadBattlePreparation(
   const battleReady = result.value.filter((deck) => deck.battleReady);
   return {
     deckOptions: result.value,
-    playerDeckId: battleReady[0]?.deckId,
+    playerDeckId: battleReady.some((deck) => deck.deckId === preferredPlayerDeckId)
+      ? preferredPlayerDeckId
+      : battleReady[0]?.deckId,
     cpuDeckId: battleReady[1]?.deckId ?? battleReady[0]?.deckId,
     firstPlayerMode: "random",
     loading: false
