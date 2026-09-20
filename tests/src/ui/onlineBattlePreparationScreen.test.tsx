@@ -7,7 +7,10 @@ import { InMemoryDeckRepository } from "../fakes/inMemoryDeckRepository";
 import { validCatalogSnapshotFixture } from "../generators/catalogGenerators";
 
 const humanMatchMocks = vi.hoisted(() => ({ start: vi.fn() }));
-vi.mock("../../../apps/web/src/online/humanBattleClient", () => ({ startOnlineHumanBattle: humanMatchMocks.start }));
+vi.mock("../../../apps/web/src/online/humanBattleClient", () => ({
+  startOnlineHumanBattle: humanMatchMocks.start,
+  cancelPendingHumanMatch: vi.fn()
+}));
 
 const readyCards = [...validCatalogSnapshotFixture.cardsById.keys()].slice(0, 10).map((cardId) => ({ cardId, count: 4 }));
 const repository = new InMemoryDeckRepository({
