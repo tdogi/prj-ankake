@@ -6,6 +6,9 @@ import { OnlineBattlePreparationScreen } from "../../../apps/web/src/online/Onli
 import { InMemoryDeckRepository } from "../fakes/inMemoryDeckRepository";
 import { validCatalogSnapshotFixture } from "../generators/catalogGenerators";
 
+const humanMatchMocks = vi.hoisted(() => ({ start: vi.fn() }));
+vi.mock("../../../apps/web/src/online/humanBattleClient", () => ({ startOnlineHumanBattle: humanMatchMocks.start }));
+
 const readyCards = [...validCatalogSnapshotFixture.cardsById.keys()].slice(0, 10).map((cardId) => ({ cardId, count: 4 }));
 const repository = new InMemoryDeckRepository({
   catalog: validCatalogSnapshotFixture,
@@ -77,15 +80,9 @@ describe("online battle preparation screen", () => {
     await waitFor(() => expect(displayNameRepository.value).toBe(""));
   });
 
-  it("creates the local CPU opponent through the online battle API", async () => {
-    vi.stubEnv("VITE_SUPABASE_URL", "http://127.0.0.1:54321");
-    vi.stubEnv("VITE_SUPABASE_PUBLISHABLE_KEY", "local-key");
+  it("starts a human match through the online battle API", async () => {
     const onMatched = vi.fn();
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ battleId: "battle-id", accessToken: "access-token", state: {}, events: [] })
-    });
-    vi.stubGlobal("fetch", fetchMock);
+    humanMatchMocks.start.mockResolvedValue({ battleId: "battle-id", side: "player", opponentName: "Player Two", state: {}, events: [], client: {} });
     try {
       render(<OnlineBattlePreparationScreen repository={repository} displayNameRepository={new MemoryDisplayNameRepository()} catalog={validCatalogSnapshotFixture} locale="en" onLocaleChange={vi.fn()} onReturn={vi.fn()} onMatched={onMatched} />);
       await screen.findByTestId("online-battle-deck-selector");
@@ -93,14 +90,9 @@ describe("online battle preparation screen", () => {
       fireEvent.click(screen.getByTestId("online-match-start-button"));
 
       await waitFor(() => expect(onMatched).toHaveBeenCalledTimes(1));
-      expect(fetchMock).toHaveBeenCalledWith(
-        "http://127.0.0.1:54321/functions/v1/local-cpu-match",
-        expect.objectContaining({ method: "POST" })
-      );
-      expect(JSON.parse(fetchMock.mock.calls[0]![1].body)).toMatchObject({ operation: "start", playerName: "Player One" });
+      expect(humanMatchMocks.start).toHaveBeenCalledWith(expect.objectContaining({ playerName: "Player One" }));
     } finally {
-      vi.unstubAllEnvs();
-      vi.unstubAllGlobals();
+      humanMatchMocks.start.mockReset();
     }
   });
 });

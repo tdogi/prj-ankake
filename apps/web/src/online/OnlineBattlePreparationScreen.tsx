@@ -2,11 +2,8 @@ import { type SavedDeckSummary, type StaticCatalogSnapshot } from "@ankake/domai
 import type { DeckRepository, OnlineDisplayNameRepository } from "@ankake/persistence";
 import { BackgroundScene, BattleDeckSelector, uiText, type UiLocale } from "@ankake/ui";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  startOnlineCpuBattle,
-  type OnlineCpuBattleConnection,
-  type OnlineCpuBattlePreferences
-} from "./localCpuBattleClient";
+import { cancelPendingHumanMatch, startOnlineHumanBattle, type OnlineHumanBattleConnection } from "./humanBattleClient";
+import type { OnlineCpuBattlePreferences } from "./localCpuBattleClient";
 
 export interface OnlineBattlePreparationScreenProps {
   readonly repository: DeckRepository;
@@ -16,7 +13,7 @@ export interface OnlineBattlePreparationScreenProps {
   readonly onLocaleChange: (locale: UiLocale) => void;
   readonly onReturn: () => void;
   readonly initialPreferences?: OnlineCpuBattlePreferences;
-  readonly onMatched: (connection: OnlineCpuBattleConnection, preferences: OnlineCpuBattlePreferences) => void;
+  readonly onMatched: (connection: OnlineHumanBattleConnection, preferences: OnlineCpuBattlePreferences) => void;
 }
 
 export function OnlineBattlePreparationScreen(props: OnlineBattlePreparationScreenProps) {
@@ -68,7 +65,7 @@ export function OnlineBattlePreparationScreen(props: OnlineBattlePreparationScre
     try {
       const deckResult = await props.repository.loadDeck(selectedDeck.deckId);
       if (!deckResult.ok) throw new Error("Selected deck could not be loaded.");
-      const connection = await startOnlineCpuBattle({
+      const connection = await startOnlineHumanBattle({
         playerName: name.trim(),
         passphrase,
         playerDeck: deckResult.value,
@@ -123,7 +120,7 @@ export function OnlineBattlePreparationScreen(props: OnlineBattlePreparationScre
           <button className="battle-button battle-button--primary" data-testid="online-match-start-button" disabled={Boolean(startDisabledReason)} onClick={() => void match()} type="button">{uiText(props.locale, "online.match.start")}</button>
         </section>
       </section>
-      {matching ? <div className="online-matching-overlay" role="status"><div><h2>{uiText(props.locale, "online.status.matching")}</h2><p>{uiText(props.locale, "online.deck")}: {selectedDeck?.name}</p></div></div> : null}
+      {matching ? <div className="online-matching-overlay" role="status"><div><h2>{uiText(props.locale, "online.status.matching")}</h2><p>{uiText(props.locale, "online.deck")}: {selectedDeck?.name}</p><button className="battle-button" onClick={() => { void cancelPendingHumanMatch().then(() => setMatching(false)).catch(() => setStatus("match-failed")); }} type="button">{uiText(props.locale, "battle.back")}</button></div></div> : null}
     </main>
   );
 }

@@ -170,6 +170,12 @@ export function useBattleController(input: BattleControllerInput): BattleControl
   }, [input.initialPlayerDeckId, input.onlineBattle, input.repository]);
 
   useEffect(() => {
+    if (!input.onlineBattle) return;
+    setSession(createBattleRuntimeSession(input.onlineBattle.initialState, input.onlineBattle.initialEvents));
+    setInteraction(IDLE_BATTLE_INTERACTION);
+  }, [input.onlineBattle?.initialState, input.onlineBattle?.initialEvents]);
+
+  useEffect(() => {
     if (!isBattleInteractionPending(interaction)) {
       return;
     }

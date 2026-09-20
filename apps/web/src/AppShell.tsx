@@ -24,19 +24,23 @@ import { createUow001DestinationCapabilities } from "./routes/routes";
 import { runStartup } from "./startup/startupOrchestrator";
 import { OnlineBattlePreparationScreen } from "./online/OnlineBattlePreparationScreen";
 import { IndexedDbOnlineDisplayNameRepository } from "@ankake/persistence";
-import {
-  submitOnlineCpuBattleCommand,
-  type OnlineCpuBattleConnection,
-  type OnlineCpuBattlePreferences
-} from "./online/localCpuBattleClient";
+import type { OnlineCpuBattlePreferences } from "./online/localCpuBattleClient";
+import { releaseHumanBattle, subscribeToHumanBattle, submitOnlineHumanBattleCommand, type OnlineHumanBattleConnection } from "./online/humanBattleClient";
 
 export function AppShell() {
   const destinationCapabilities = useMemo(() => createUow001DestinationCapabilities(), []);
   const [snapshot, dispatch] = useReducer(appStateReducer, createInitialAppSnapshot());
   const [locale, setLocale] = useState<AppLocale>("ja");
-  const [onlineBattle, setOnlineBattle] = useState<OnlineCpuBattleConnection>();
+  const [onlineBattle, setOnlineBattle] = useState<OnlineHumanBattleConnection>();
   const [onlinePreferences, setOnlinePreferences] = useState<OnlineCpuBattlePreferences>();
   const viewModel = projectMenuViewModel(snapshot, destinationCapabilities);
+
+  useEffect(() => {
+    if (!onlineBattle) return;
+    return subscribeToHumanBattle(onlineBattle, (update) => {
+      setOnlineBattle((current) => current && current.battleId === update.battleId ? { ...current, ...update } : current);
+    });
+  }, [onlineBattle?.battleId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -76,6 +80,7 @@ export function AppShell() {
   }
 
   function handleReturnToMenu(): void {
+    if (onlineBattle) void releaseHumanBattle(onlineBattle);
     setOnlineBattle(undefined);
     setOnlinePreferences(undefined);
     dispatch({
@@ -107,7 +112,7 @@ export function AppShell() {
   );
 }
 
-function OnlineBattleRoute({ catalog, locale, initialPreferences, onLocaleChange, onReturn, onMatched }: { readonly catalog: StaticCatalogSnapshot; readonly locale: AppLocale; readonly initialPreferences?: OnlineCpuBattlePreferences; readonly onLocaleChange: (locale: AppLocale) => void; readonly onReturn: () => void; readonly onMatched: (connection: OnlineCpuBattleConnection, preferences: OnlineCpuBattlePreferences) => void }) {
+function OnlineBattleRoute({ catalog, locale, initialPreferences, onLocaleChange, onReturn, onMatched }: { readonly catalog: StaticCatalogSnapshot; readonly locale: AppLocale; readonly initialPreferences?: OnlineCpuBattlePreferences; readonly onLocaleChange: (locale: AppLocale) => void; readonly onReturn: () => void; readonly onMatched: (connection: OnlineHumanBattleConnection, preferences: OnlineCpuBattlePreferences) => void }) {
   const repository = useMemo(() => createDeckRepository(catalog), [catalog]);
   const displayNameRepository = useMemo(() => new IndexedDbOnlineDisplayNameRepository(), []);
   return <OnlineBattlePreparationScreen repository={repository} displayNameRepository={displayNameRepository} catalog={catalog} initialPreferences={initialPreferences} locale={locale} onLocaleChange={onLocaleChange} onReturn={onReturn} onMatched={onMatched} />;
@@ -119,7 +124,7 @@ interface BattleRouteProps {
   readonly onReturnToMenu: () => void;
   readonly autoStart?: boolean;
   readonly initialPlayerDeckId?: string;
-  readonly onlineBattle?: OnlineCpuBattleConnection;
+  readonly onlineBattle?: OnlineHumanBattleConnection;
   readonly onReturnToOnlinePreparation?: () => void;
 }
 
@@ -135,7 +140,7 @@ function BattleRoute({ catalog, locale, onReturnToMenu, autoStart, initialPlayer
       onlineBattle: {
         initialState: onlineBattle.state,
         initialEvents: onlineBattle.events,
-        submitCommand: (command) => submitOnlineCpuBattleCommand(onlineBattle, command)
+        submitCommand: (command) => submitOnlineHumanBattleCommand(onlineBattle, command)
       },
       onReturnToOnlinePreparation
     } : {})
