@@ -38,12 +38,26 @@ export async function submitOnlineHumanBattleCommand(connection: OnlineHumanBatt
   return await request(connection.client, { operation: "command", command });
 }
 
-export function subscribeToHumanBattle(connection: OnlineHumanBattleConnection, onState: (update: Omit<OnlineHumanBattleConnection, "client">) => void): () => void {
+export function subscribeToHumanBattle(connection: OnlineHumanBattleConnection, onState: (update: Omit<OnlineHumanBattleConnection, "client">) => void, onRealtimeError?: (error: unknown) => void): () => void {
+  let synchronizing = false;
+  async function synchronize(): Promise<void> {
+    if (synchronizing) return;
+    synchronizing = true;
+    try {
+      const current = await request<MatchResponse>(connection.client, { operation: "status" });
+      if (current.connection && current.connection.revision > connection.revision) onState(current.connection);
+    } catch (error) {
+      onRealtimeError?.(error);
+    } finally {
+      synchronizing = false;
+    }
+  }
   const channel = connection.client.channel(`battle:${connection.battleId}:${connection.side}`, { config: { private: true } })
     .on("broadcast", { event: "state" }, ({ payload }) => { if (isConnection(payload)) onState(payload); })
-    .subscribe();
-  const timer = window.setInterval(() => { void request(connection.client, { operation: "heartbeat" }); }, 15_000);
-  return () => { window.clearInterval(timer); void connection.client.removeChannel(channel); };
+    .subscribe((status, error) => { if (status === "CHANNEL_ERROR") { onRealtimeError?.(error); void synchronize(); } });
+  const heartbeatTimer = window.setInterval(() => { void request(connection.client, { operation: "heartbeat" }); }, 15_000);
+  const recoveryTimer = window.setInterval(() => { if (connection.state.activeSide === "cpu") void synchronize(); }, 5_000);
+  return () => { window.clearInterval(heartbeatTimer); window.clearInterval(recoveryTimer); void connection.client.removeChannel(channel); };
 }
 
 async function waitForMatch(client: SupabaseClient, userId: string): Promise<OnlineHumanBattleConnection> {
