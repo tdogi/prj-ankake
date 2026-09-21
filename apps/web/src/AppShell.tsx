@@ -39,8 +39,10 @@ export function AppShell() {
     if (!onlineBattle) return;
     return subscribeToHumanBattle(onlineBattle, (update) => {
       setOnlineBattle((current) => current && current.battleId === update.battleId ? { ...current, ...update } : current);
+    }, (error) => {
+      console.error("[ankake:online-realtime] state synchronization failed", error);
     });
-  }, [onlineBattle?.battleId]);
+  }, [onlineBattle?.battleId, onlineBattle?.revision]);
 
   useEffect(() => {
     let cancelled = false;
