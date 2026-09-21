@@ -178,6 +178,7 @@ function BattleRoute({ catalog, locale, onReturnToMenu, autoStart, initialPlayer
       interaction={controller.viewModel.interaction}
       logEntries={localizeBattleLogEntries(controller.viewModel.logEntries, locale)}
       cpuStatus={controller.viewModel.cpuStatus}
+      opponentName={onlineBattle?.opponentName}
       resonanceIssueCode={controller.viewModel.lastValidationIssueCode}
       animationEvent={controller.viewModel.animationEvent}
       activeAttackerInstanceId={controller.viewModel.activeAttackerInstanceId}

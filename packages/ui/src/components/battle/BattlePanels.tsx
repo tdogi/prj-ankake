@@ -12,6 +12,7 @@ import { localizeBattleEvent, localizeBattleSide, uiText } from "../../localizat
 export interface BattleStatusPanelProps {
   readonly viewModel: PublicBattleView;
   readonly cpuStatus: string;
+  readonly opponentName?: string;
   readonly onReturnToMenu: () => void;
   readonly onQuitBattle: () => void;
   readonly locale?: "ja" | "en";
@@ -26,7 +27,7 @@ export function BattleStatusPanel(props: BattleStatusPanelProps) {
       <div>
         <p className="battle-kicker">{props.locale === "ja" ? "ターン" : "Turn"} {viewModel.turnNumber}</p>
         <h1>
-          {viewModel.activeSide === "player" ? localizeBattleSide(props.locale, "player") : "CPU"} -{" "}
+          {viewModel.activeSide === "player" ? localizeBattleSide(props.locale, "player") : props.opponentName ?? "CPU"} -{" "}
           {phaseLabel(viewModel.phase, props.locale)}
         </h1>
       </div>
@@ -61,6 +62,7 @@ export interface BattleResourceControlsProps {
   readonly canEndPlayPhase: boolean;
   readonly onEndPlayPhase: () => void;
   readonly locale?: "ja" | "en";
+  readonly opponentName?: string;
 }
 
 export function BattleResourceControls(props: BattleResourceControlsProps) {
@@ -89,6 +91,7 @@ export function BattleInfoPanels(props: {
   readonly viewModel: PublicBattleView;
   readonly onOpenGraveyard: (side: BattleSide) => void;
   readonly locale?: "ja" | "en";
+  readonly opponentName?: string;
 }) {
   const { viewModel } = props;
 
@@ -97,15 +100,15 @@ export function BattleInfoPanels(props: {
       <section className="battle-panel battle-card-counts" data-testid="battle-card-counts-panel">
         <h2>{props.locale === "ja" ? "カード枚数" : "Cards"}</h2>
         <CardCounts side="player" handCount={viewModel.playerHand.length} deckCount={viewModel.playerDeckCount} graveyardCount={viewModel.playerGraveyard.length} locale={props.locale} onOpenGraveyard={props.onOpenGraveyard} />
-        <CardCounts side="cpu" handCount={viewModel.cpuHandCount} deckCount={viewModel.cpuDeckCount} graveyardCount={viewModel.cpuGraveyard.length} locale={props.locale} onOpenGraveyard={props.onOpenGraveyard} />
+        <CardCounts side="cpu" handCount={viewModel.cpuHandCount} deckCount={viewModel.cpuDeckCount} graveyardCount={viewModel.cpuGraveyard.length} opponentName={props.opponentName} locale={props.locale} onOpenGraveyard={props.onOpenGraveyard} />
       </section>
-      <ResonancePanel viewModel={viewModel} locale={props.locale} />
+      <ResonancePanel viewModel={viewModel} opponentName={props.opponentName} locale={props.locale} />
     </>
   );
 }
 
-function CardCounts(props: { readonly side: BattleSide; readonly handCount: number; readonly deckCount: number; readonly graveyardCount: number; readonly locale?: "ja" | "en"; readonly onOpenGraveyard: (side: BattleSide) => void }) {
-  const label = props.side === "player" ? (props.locale === "ja" ? "プレイヤー" : "Player") : "CPU";
+function CardCounts(props: { readonly side: BattleSide; readonly handCount: number; readonly deckCount: number; readonly graveyardCount: number; readonly opponentName?: string; readonly locale?: "ja" | "en"; readonly onOpenGraveyard: (side: BattleSide) => void }) {
+  const label = props.side === "player" ? (props.locale === "ja" ? "プレイヤー" : "Player") : props.opponentName ?? "CPU";
   return <section className="battle-card-counts__side" data-testid={`battle-${props.side}-info-panel`}>
     <h3>{label}</h3>
     <p>{props.locale === "ja" ? "手札" : "Hand"}: {props.handCount}</p>
@@ -116,10 +119,10 @@ function CardCounts(props: { readonly side: BattleSide; readonly handCount: numb
   </section>;
 }
 
-function ResonancePanel(props: { readonly viewModel: PublicBattleView; readonly locale?: "ja" | "en" }) {
+function ResonancePanel(props: { readonly viewModel: PublicBattleView; readonly opponentName?: string; readonly locale?: "ja" | "en" }) {
   const [side, setSide] = useState<BattleSide>("player");
   const playerLabel = props.locale === "ja" ? "味方" : "Player";
-  const cpuLabel = props.locale === "ja" ? "敵" : "CPU";
+  const cpuLabel = props.opponentName ?? (props.locale === "ja" ? "敵" : "CPU");
   return <section className="battle-panel" data-testid="battle-resonance-panel">
     <div className="battle-resonance-tabs" role="group" aria-label={props.locale === "ja" ? "共鳴値の表示対象" : "Resonance display side"}>
       <button className="battle-button battle-button--quiet" data-testid="battle-resonance-player-tab" aria-pressed={side === "player"} type="button" onClick={() => setSide("player")}>{playerLabel}</button>
