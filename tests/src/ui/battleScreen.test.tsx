@@ -81,6 +81,13 @@ describe("battle screen", () => {
     expect(onQuitBattle).toHaveBeenCalledTimes(1);
   });
 
+  it("shows the human opponent name instead of CPU labels when supplied", () => {
+    renderBattleScreen(projectPublicBattleView(createBattleScreenState()), { opponentName: "Player Two" });
+    expect(screen.getByTestId("battle-cpu-info-panel")).toHaveTextContent("Player Two");
+    fireEvent.click(screen.getByTestId("battle-resonance-cpu-tab"));
+    expect(screen.getByTestId("battle-resonance-cpu-tab")).toHaveTextContent("Player Two");
+  });
+
   it("shows a specific Japanese reason for an unplayable hand card", () => {
     const viewModel = projectPublicBattleView(createBattleScreenState());
     const unavailableCard = {
@@ -1370,6 +1377,7 @@ function renderBattleScreen(
     readonly onQuitBattle?: () => void;
     readonly locale?: "ja" | "en";
     readonly activeAttackerInstanceId?: string;
+    readonly opponentName?: string;
   } = {}
 ) {
   return render(
@@ -1377,6 +1385,7 @@ function renderBattleScreen(
       viewModel={viewModel}
       logEntries={LOG_ENTRIES}
       cpuStatus={overrides.cpuStatus ?? "idle"}
+      opponentName={overrides.opponentName}
       locale={overrides.locale}
       activeAttackerInstanceId={overrides.activeAttackerInstanceId}
       onReturnToPreparation={vi.fn()}

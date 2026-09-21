@@ -28,6 +28,7 @@ export interface BattleScreenProps {
   readonly viewModel: PublicBattleView;
   readonly logEntries: readonly BattleLogEntry[];
   readonly cpuStatus: "idle" | "thinking" | "executing" | "completed" | "limit-reached";
+  readonly opponentName?: string;
   readonly interaction?: BattleInteractionControlsView;
   readonly onReturnToPreparation: () => void;
   readonly onReturnToMenu: () => void;
@@ -111,6 +112,7 @@ export function BattleScreen(props: BattleScreenProps) {
       <BattleStatusPanel
         viewModel={props.viewModel}
         cpuStatus={props.cpuStatus}
+        opponentName={props.opponentName}
         locale={props.locale}
         interactionDisabled={interactionDisabled}
         onReturnToMenu={props.onReturnToMenu}
@@ -167,6 +169,7 @@ export function BattleScreen(props: BattleScreenProps) {
           />
           <BattleInfoPanels
             viewModel={props.viewModel}
+            opponentName={props.opponentName}
             onOpenGraveyard={setGraveyardSide}
             locale={props.locale}
           />
