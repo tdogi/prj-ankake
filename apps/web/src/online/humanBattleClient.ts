@@ -15,8 +15,24 @@ export async function startOnlineHumanBattle(input: { readonly playerName: strin
   const connection = await waitForMatch(client, userId); pendingClient = undefined; return connection;
 }
 
-export async function cancelPendingHumanMatch(): Promise<void> { if (pendingClient) { await request(pendingClient, { operation: "cancel" }); pendingClient = undefined; } }
-export async function releaseHumanBattle(connection: OnlineHumanBattleConnection): Promise<void> { await request(connection.client, { operation: "release" }); }
+export async function cancelPendingHumanMatch(): Promise<void> {
+  if (!pendingClient) return;
+  const client = pendingClient;
+  pendingClient = undefined;
+  try {
+    await request(client, { operation: "cancel" });
+  } finally {
+    await discardLocalAnonymousSession(client);
+  }
+}
+
+export async function releaseHumanBattle(connection: OnlineHumanBattleConnection): Promise<void> {
+  try {
+    await request(connection.client, { operation: "release" });
+  } finally {
+    await discardLocalAnonymousSession(connection.client);
+  }
+}
 
 export async function submitOnlineHumanBattleCommand(connection: OnlineHumanBattleConnection, command: BattleCommand): Promise<{ readonly ok: true; readonly state: BattleState; readonly events: readonly BattleEvent[] } | { readonly ok: false; readonly issues: readonly BattleValidationIssue[] }> {
   return await request(connection.client, { operation: "command", command });
@@ -49,10 +65,22 @@ async function authenticatedClient(): Promise<SupabaseClient> {
   if (!url || !key) throw new Error("Supabase connection settings are missing.");
   const client = createClient(url, key, { auth: { persistSession: true, autoRefreshToken: true } });
   let session = (await client.auth.getSession()).data.session;
+  if (session) {
+    const user = await client.auth.getUser();
+    if (user.error || !user.data.user?.is_anonymous) {
+      await discardLocalAnonymousSession(client);
+      session = null;
+    }
+  }
   if (!session) session = (await client.auth.signInAnonymously()).data.session;
   if (!session) throw new Error("Anonymous sign-in failed.");
   await client.realtime.setAuth(session.access_token);
   return client;
+}
+
+async function discardLocalAnonymousSession(client: SupabaseClient): Promise<void> {
+  await client.removeAllChannels();
+  await client.auth.signOut({ scope: "local" });
 }
 
 async function request<T>(client: SupabaseClient, body: Record<string, unknown>): Promise<T> {
